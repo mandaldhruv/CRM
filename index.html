@@ -1,0 +1,4779 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kinetic Atelier | Elite Operations Dashboard</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@700;800&family=Material+Icons+Round"
+        rel="stylesheet">
+    <style>
+        /* DESIGN SYSTEM: TONAL ARCHITECTURE
+           Implementing the "No-Line" Rule & Surface Hierarchy 
+        */
+        :root {
+            --surface: #f8f9ff;
+            --surface-container-low: #eff4ff;
+            --surface-container-highest: #d5e3fd;
+            --on-surface: #0d1c2f;
+            --on-surface-variant: #464555;
+            --primary: #3525cd;
+            --primary-gradient: linear-gradient(135deg, #3525cd 0%, #4f46e5 100%);
+            --success: #2e7d32;
+            --error: #ba1a1a;
+            --warning: #ed6c02;
+            --sidebar-width: 260px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--surface);
+            color: var(--on-surface);
+            overflow: hidden;
+            display: flex;
+            height: 100vh;
+        }
+
+        body.dark-theme {
+            --surface: #121212;
+            --surface-container-low: #1b1b1b;
+            --surface-container-highest: #2a2a2a;
+            --on-surface: #ffffff;
+            --on-surface-variant: #b8bcc8;
+            --primary: #8f7cff;
+            --primary-gradient: linear-gradient(135deg, #6d5efc 0%, #8f7cff 100%);
+            --success: #72d572;
+            --error: #ff8a80;
+            --warning: #ffb74d;
+        }
+
+        body.dark-theme .card,
+        body.dark-theme .data-table td,
+        body.dark-theme .toast,
+        body.dark-theme .form-input,
+        body.dark-theme .form-select,
+        body.dark-theme .form-textarea,
+        body.dark-theme .modal-drawer,
+        body.dark-theme .command-palette {
+            background: #1a1a1a;
+            color: var(--on-surface);
+        }
+
+        body.dark-theme .data-table td {
+            border-bottom-color: var(--surface);
+        }
+
+        body.dark-theme .btn-secondary,
+        body.dark-theme .theme-toggle {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        body.dark-theme .modal-header,
+        body.dark-theme .modal-footer,
+        body.dark-theme .command-palette-header {
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        body.dark-theme .form-input,
+        body.dark-theme .form-select,
+        body.dark-theme .form-textarea {
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        body.dark-theme .btn-ghost {
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        body.dark-theme .payroll-modal {
+            background: #1a1a1a;
+        }
+
+        body.dark-theme .payroll-modal-header {
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        h1,
+        h2,
+        .display-text {
+            font-family: 'Manrope', sans-serif;
+            font-weight: 800;
+        }
+
+        /* --- SIDEBAR NAVIGATION --- */
+        nav.sidebar {
+            width: var(--sidebar-width);
+            background: var(--surface-container-low);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 2rem 1rem;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0 1rem 3rem 1rem;
+        }
+
+        .brand .logo-icon {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 8px;
+            border-radius: 12px;
+        }
+
+        .nav-menu {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .sidebar-footer {
+            padding: 1rem 0.5rem 0;
+        }
+
+        .theme-toggle {
+            width: 100%;
+            justify-content: space-between;
+            background: rgba(13, 28, 47, 0.06);
+            border: 1px solid rgba(13, 28, 47, 0.08);
+        }
+
+        .theme-toggle:hover {
+            background: var(--surface-container-highest);
+            color: var(--on-surface);
+        }
+
+        .theme-toggle-meta {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .theme-toggle-status {
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--primary);
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 1rem;
+            text-decoration: none;
+            color: var(--on-surface-variant);
+            border-radius: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .nav-item:hover {
+            background: var(--surface-container-highest);
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: var(--primary-gradient);
+            color: white;
+            box-shadow: 0 10px 20px rgba(53, 37, 205, 0.2);
+        }
+
+        /* --- MAIN CONTENT AREA --- */
+        main.content-wrapper {
+            flex-grow: 1;
+            height: 100vh;
+            overflow-y: auto;
+            padding: 2rem 3rem;
+            position: relative;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2.5rem;
+        }
+
+        section {
+            display: none;
+            /* Hidden by default */
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* --- UI COMPONENTS (CARDS, TABLES, CHIPS) --- */
+        .grid-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 24px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+            position: relative;
+        }
+
+        .stat-card .label {
+            color: var(--on-surface-variant);
+            font-size: 0.875rem;
+            margin-bottom: 8px;
+        }
+
+        .stat-card .value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            display: block;
+        }
+
+        .btn-primary {
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-secondary {
+            background: rgba(13, 28, 47, 0.08);
+            color: var(--on-surface);
+            border: 1px solid rgba(13, 28, 47, 0.12);
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: var(--transition);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(13, 28, 47, 0.12);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(13, 28, 47, 0.08);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .data-table th {
+            text-align: left;
+            padding: 1rem;
+            color: var(--on-surface-variant);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .data-table td {
+            padding: 1.25rem 1rem;
+            background: white;
+            border-bottom: 8px solid var(--surface);
+            /* Using spacing instead of borders */
+        }
+
+        .status-chip {
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-active {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-due {
+            background: #fff3e0;
+            color: #ef6c00;
+        }
+
+        .status-urgent {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        /* --- CRM PIPELINE BOARD --- */
+        .pipeline-board {
+            display: flex;
+            gap: 1.5rem;
+            overflow-x: auto;
+            padding-bottom: 1rem;
+        }
+
+        .pipeline-col {
+            min-width: 300px;
+            background: var(--surface-container-low);
+            padding: 1rem;
+            border-radius: 20px;
+        }
+
+        /* --- MODAL & DRAWER SYSTEM (GLASSMORPHISM) --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(13, 28, 47, 0.4);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            opacity: 0;
+            visibility: hidden;
+            transition: var(--transition);
+            z-index: 990;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-drawer {
+            position: fixed;
+            right: 0;
+            top: 0;
+            height: 100vh;
+            width: 600px;
+            background: rgba(248, 249, 255, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(53, 37, 205, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+        }
+
+        .modal-drawer.active {
+            transform: translateX(0);
+        }
+
+        .modal-header {
+            position: relative;
+            flex-shrink: 0;
+            padding: 2rem;
+            border-bottom: 1px solid rgba(13, 28, 47, 0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-family: 'Manrope', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--on-surface);
+        }
+
+        .drawer-close-btn {
+            position: absolute;
+            top: 16px;
+            right: 20px;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 2rem;
+            font-weight: bold;
+            line-height: 1;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .drawer-close-btn:hover {
+            color: #ba1a1a;
+        }
+
+        .drawer-close-btn:active {
+            transform: scale(0.96);
+        }
+
+        .modal-content,
+        .drawer-body {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 2rem;
+            padding-bottom: 2rem;
+        }
+
+        .modal-footer,
+        .drawer-footer {
+            flex-shrink: 0;
+            border-top: 1px solid rgba(13, 28, 47, 0.08);
+            padding: 1.5rem 2rem;
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+
+        .btn-secondary {
+            background: var(--surface-container-highest);
+            color: var(--on-surface);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .btn-secondary:hover {
+            background: var(--surface-container-highest);
+            opacity: 0.8;
+        }
+
+        /* --- TOAST NOTIFICATION SYSTEM --- */
+        .toast-container {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            max-width: 420px;
+        }
+
+        .toast {
+            background: white;
+            border-radius: 16px;
+            padding: 1.25rem 1.5rem;
+            box-shadow: 0 12px 24px rgba(13, 28, 47, 0.12);
+            border-left: 4px solid var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+        }
+
+        .toast.success {
+            border-left-color: var(--success);
+        }
+
+        .toast.error {
+            border-left-color: var(--error);
+        }
+
+        .toast.info {
+            border-left-color: var(--primary);
+        }
+
+        .toast-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .toast.success .toast-icon {
+            color: var(--success);
+        }
+
+        .toast.error .toast-icon {
+            color: var(--error);
+        }
+
+        .toast.info .toast-icon {
+            color: var(--primary);
+        }
+
+        .toast-content {
+            flex: 1;
+        }
+
+        .toast-title {
+            font-weight: 600;
+            color: var(--on-surface);
+            font-size: 0.95rem;
+        }
+
+        .toast-message {
+            color: var(--on-surface-variant);
+            font-size: 0.85rem;
+            margin-top: 4px;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(420px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOutRight {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+
+            to {
+                transform: translateX(420px);
+                opacity: 0;
+            }
+        }
+
+        .toast.removing {
+            animation: slideOutRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .command-palette-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(7, 10, 18, 0.52);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 10vh 1.5rem 2rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: var(--transition);
+            z-index: 2100;
+        }
+
+        .command-palette-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .command-palette {
+            width: min(760px, 100%);
+            border-radius: 28px;
+            background: color-mix(in srgb, white 92%, var(--surface) 8%);
+            border: 1px solid rgba(255, 255, 255, 0.24);
+            box-shadow: 0 32px 80px rgba(13, 28, 47, 0.24);
+            overflow: hidden;
+            transform: translateY(-12px) scale(0.98);
+            transition: var(--transition);
+        }
+
+        .command-palette-overlay.active .command-palette {
+            transform: translateY(0) scale(1);
+        }
+
+        .command-palette-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid rgba(13, 28, 47, 0.08);
+        }
+
+        .command-palette-header .material-icons-round {
+            color: var(--on-surface-variant);
+        }
+
+        .command-palette-input {
+            width: 100%;
+            border: none;
+            background: transparent;
+            color: var(--on-surface);
+            font-family: 'Manrope', sans-serif;
+            font-size: clamp(1.2rem, 2vw, 1.7rem);
+            font-weight: 700;
+        }
+
+        .command-palette-input::placeholder {
+            color: var(--on-surface-variant);
+        }
+
+        .command-palette-input:focus {
+            outline: none;
+        }
+
+        .command-palette-results {
+            max-height: 380px;
+            overflow-y: auto;
+            padding: 0.75rem;
+        }
+
+        .command-result {
+            width: 100%;
+            border: none;
+            background: transparent;
+            color: inherit;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1rem;
+            border-radius: 18px;
+            cursor: pointer;
+            text-align: left;
+            transition: var(--transition);
+        }
+
+        .command-result:hover,
+        .command-result:focus-visible {
+            background: var(--surface-container-low);
+            outline: none;
+        }
+
+        .command-result-main {
+            display: flex;
+            align-items: center;
+            gap: 0.9rem;
+            min-width: 0;
+        }
+
+        .command-result-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            display: grid;
+            place-items: center;
+            background: var(--surface-container-highest);
+            color: var(--primary);
+            flex-shrink: 0;
+        }
+
+        .command-result-name {
+            font-weight: 700;
+            color: var(--on-surface);
+        }
+
+        .command-result-meta {
+            color: var(--on-surface-variant);
+            font-size: 0.85rem;
+            margin-top: 0.25rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .command-result-type {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--primary);
+            flex-shrink: 0;
+        }
+
+        .command-empty {
+            padding: 1.25rem;
+            text-align: center;
+            color: var(--on-surface-variant);
+        }
+
+        .section-subtitle {
+            color: var(--on-surface-variant);
+            margin-top: 0.4rem;
+        }
+
+        .hr-shell {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .hr-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .hr-kpi {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.65rem;
+            padding: 0.8rem 1rem;
+            border-radius: 16px;
+            background: var(--surface-container-low);
+            color: var(--on-surface);
+            font-weight: 600;
+        }
+
+        .hr-kpi .material-icons-round {
+            color: var(--primary);
+        }
+
+        .attendance-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.65rem;
+        }
+
+        .btn-small {
+            padding: 0.7rem 0.9rem;
+            border-radius: 10px;
+            font-size: 0.85rem;
+        }
+
+        .btn-success {
+            background: rgba(46, 125, 50, 0.12);
+            color: var(--success);
+            border: 1px solid rgba(46, 125, 50, 0.18);
+        }
+
+        .btn-danger {
+            background: rgba(186, 26, 26, 0.1);
+            color: var(--error);
+            border: 1px solid rgba(186, 26, 26, 0.16);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--on-surface);
+            border: 1px solid rgba(13, 28, 47, 0.12);
+        }
+
+        .attendance-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.45rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .attendance-status.present {
+            background: rgba(46, 125, 50, 0.12);
+            color: var(--success);
+        }
+
+        .attendance-status.absent {
+            background: rgba(186, 26, 26, 0.1);
+            color: var(--error);
+        }
+
+        .attendance-status.unmarked {
+            background: rgba(13, 28, 47, 0.08);
+            color: var(--on-surface-variant);
+        }
+
+        .payroll-modal-overlay {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            background: rgba(7, 10, 18, 0.58);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            opacity: 0;
+            pointer-events: none;
+            transition: var(--transition);
+            z-index: 2200;
+        }
+
+        .payroll-modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .payroll-modal {
+            width: min(720px, 100%);
+            background: color-mix(in srgb, white 94%, var(--surface) 6%);
+            border-radius: 28px;
+            box-shadow: 0 24px 64px rgba(13, 28, 47, 0.24);
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            overflow: hidden;
+            transform: translateY(12px) scale(0.98);
+            transition: var(--transition);
+        }
+
+        .payroll-modal-overlay.active .payroll-modal {
+            transform: translateY(0) scale(1);
+        }
+
+        .payroll-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1.5rem 1.75rem;
+            border-bottom: 1px solid rgba(13, 28, 47, 0.08);
+        }
+
+        .payroll-modal-body {
+            padding: 1.75rem;
+        }
+
+        .payroll-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1rem 1.25rem;
+        }
+
+        .payroll-summary {
+            margin-top: 1.5rem;
+            padding: 1.25rem;
+            border-radius: 20px;
+            background: var(--surface-container-low);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .payroll-summary-label {
+            color: var(--on-surface-variant);
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 700;
+        }
+
+        .payroll-summary-value {
+            font-family: 'Manrope', sans-serif;
+            font-size: clamp(1.5rem, 3vw, 2rem);
+            font-weight: 800;
+            color: var(--on-surface);
+        }
+
+        .payroll-modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.85rem;
+            margin-top: 1.5rem;
+        }
+
+        .reports-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .report-card {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            min-height: 240px;
+        }
+
+        .report-card-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .report-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 16px;
+            display: grid;
+            place-items: center;
+            background: var(--surface-container-low);
+            color: var(--primary);
+            flex-shrink: 0;
+        }
+
+        .report-metric {
+            font-family: 'Manrope', sans-serif;
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--on-surface);
+        }
+
+        .report-card p {
+            color: var(--on-surface-variant);
+            line-height: 1.6;
+        }
+
+        .report-card .btn-primary,
+        .report-card .btn-secondary {
+            margin-top: auto;
+            width: fit-content;
+        }
+
+        /* --- FORM INPUTS --- */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--on-surface);
+            font-size: 0.95rem;
+        }
+
+        .form-input,
+        .form-select,
+        .form-textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid rgba(13, 28, 47, 0.12);
+            border-radius: 12px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            background: white;
+            color: var(--on-surface);
+            transition: var(--transition);
+        }
+
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(53, 37, 205, 0.1);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .field-error {
+            min-height: 1rem;
+            margin-top: 0.45rem;
+            color: var(--error);
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+        .input-invalid {
+            border-color: var(--error) !important;
+            box-shadow: 0 0 0 3px rgba(186, 26, 26, 0.12) !important;
+        }
+
+        .whatsapp-link {
+            color: #128c7e;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .whatsapp-link:hover {
+            text-decoration: underline;
+        }
+
+        /* --- MOBILE RESPONSIVENESS --- */
+        @media (max-width: 1024px) {
+            nav.sidebar {
+                width: 80px;
+                padding: 2rem 0.5rem;
+            }
+
+            .nav-item span:not(.material-icons-round) {
+                display: none;
+            }
+
+            .brand span {
+                display: none;
+            }
+
+            .theme-toggle {
+                justify-content: center;
+                padding-inline: 0.75rem;
+            }
+
+            .theme-toggle-status {
+                display: none;
+            }
+
+            .modal-drawer {
+                width: 100%;
+            }
+
+            .toast-container {
+                right: 1rem;
+                left: 1rem;
+                max-width: none;
+                top: 1rem;
+            }
+
+            .kanban-board {
+                flex-direction: column;
+            }
+
+            .kanban-column {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .modal-content {
+                padding: 1rem;
+            }
+
+            .modal-header {
+                padding: 1rem;
+            }
+
+            .command-palette-overlay {
+                padding-inline: 0.75rem;
+                padding-top: 8vh;
+            }
+
+            .command-palette-header {
+                padding: 1rem;
+            }
+
+            .payroll-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .payroll-summary,
+            .payroll-modal-actions,
+            .hr-toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+
+        /* --- SETTINGS TABS SYSTEM --- */
+        .settings-tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid rgba(13, 28, 47, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .settings-tab-btn {
+            background: none;
+            border: none;
+            padding: 1rem 1.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--on-surface-variant);
+            border-bottom: 3px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: var(--transition);
+            position: relative;
+            margin-bottom: -1px;
+        }
+
+        .settings-tab-btn:hover {
+            color: var(--primary);
+        }
+
+        .settings-tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .settings-tab-btn .material-icons-round {
+            font-size: 1.25rem;
+        }
+
+        .settings-tab-panel {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .settings-tab-panel.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .package-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.5rem;
+            background: white;
+            border: 1px solid rgba(13, 28, 47, 0.08);
+            border-radius: 12px;
+            transition: var(--transition);
+        }
+
+        .package-row:hover {
+            border-color: var(--primary);
+            box-shadow: 0 2px 8px rgba(53, 37, 205, 0.08);
+        }
+
+        .package-info {
+            flex-grow: 1;
+        }
+
+        .package-info h4 {
+            margin: 0;
+            font-size: 1rem;
+            color: var(--on-surface);
+        }
+
+        .package-info p {
+            margin: 0.5rem 0 0 0;
+            font-size: 0.85rem;
+            color: var(--on-surface-variant);
+        }
+
+        .package-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--on-surface);
+            font-size: 0.9rem;
+        }
+
+        .form-group small {
+            margin-top: 0.25rem;
+        }
+
+        .form-input {
+            padding: 0.75rem 1rem;
+            border: 1px solid rgba(13, 28, 47, 0.12);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            transition: var(--transition);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(53, 37, 205, 0.1);
+        }
+
+        .page-header p {
+            margin-top: 0.5rem;
+        }
+
+        /* --- KANBAN BOARD SYSTEM --- */
+        .kanban-board {
+            display: flex;
+            gap: 1.5rem;
+            overflow-x: auto;
+            padding: 1rem 0;
+        }
+
+        .kanban-column {
+            flex: 0 0 32%;
+            background: var(--surface-container-low);
+            border-radius: 16px;
+            padding: 1.5rem;
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .kanban-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .kanban-title {
+            font-family: 'Manrope', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--on-surface);
+        }
+
+        .kanban-count {
+            background: var(--primary-gradient);
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .kanban-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            flex: 1;
+        }
+
+        .kanban-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem;
+            cursor: move;
+            transition: var(--transition);
+            border-left: 4px solid var(--primary);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .kanban-card:hover {
+            box-shadow: 0 4px 12px rgba(53, 37, 205, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .kanban-card-name {
+            font-weight: 600;
+            color: var(--on-surface);
+            margin-bottom: 4px;
+            font-size: 0.95rem;
+        }
+
+        .kanban-card-meta {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 0.5rem;
+        }
+
+        .kanban-card-tag {
+            background: var(--surface);
+            color: var(--on-surface-variant);
+            font-size: 0.7rem;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+
+        .kanban-card-goal {
+            background: rgba(53, 37, 205, 0.1);
+            color: var(--primary);
+        }
+
+        .kanban-card-date {
+            color: var(--on-surface-variant);
+            font-size: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        .kanban-empty {
+            color: var(--on-surface-variant);
+            text-align: center;
+            padding: 2rem 1rem;
+            font-size: 0.9rem;
+        }
+
+        /* --- BMI CALCULATOR WIDGET --- */
+        .bmi-calculator {
+            background: linear-gradient(135deg, rgba(53, 37, 205, 0.05) 0%, rgba(79, 70, 229, 0.05) 100%);
+            border: 1px solid rgba(53, 37, 205, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .bmi-calculator-title {
+            font-weight: 600;
+            color: var(--on-surface);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .bmi-inputs-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .bmi-input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .bmi-label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--on-surface-variant);
+            margin-bottom: 0.5rem;
+        }
+
+        .bmi-input {
+            padding: 10px 12px;
+            border: 1px solid rgba(13, 28, 47, 0.12);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: var(--transition);
+        }
+
+        .bmi-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(53, 37, 205, 0.1);
+        }
+
+        .bmi-button {
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: var(--transition);
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+
+        .bmi-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(53, 37, 205, 0.3);
+        }
+
+        .bmi-result {
+            display: none;
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            border-left: 4px solid var(--primary);
+        }
+
+        .bmi-result.active {
+            display: block;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .bmi-value {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+        }
+
+        .bmi-value.underweight {
+            color: #1976d2;
+        }
+
+        .bmi-value.normal {
+            color: #2e7d32;
+        }
+
+        .bmi-value.overweight {
+            color: #ed6c02;
+        }
+
+        .bmi-value.obese {
+            color: #ba1a1a;
+        }
+
+        .bmi-status {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .bmi-status.underweight {
+            color: #1976d2;
+        }
+
+        .bmi-status.normal {
+            color: #2e7d32;
+        }
+
+        .bmi-status.overweight {
+            color: #ed6c02;
+        }
+
+        .bmi-status.obese {
+            color: #ba1a1a;
+        }
+
+        .bmi-info {
+            font-size: 0.85rem;
+            color: var(--on-surface-variant);
+            margin-top: 0.5rem;
+        }
+
+        .bmi-info strong {
+            color: var(--on-surface);
+        }
+
+        /* --- ENQUIRY FORM SPECIFIC --- */
+        .enquiry-fields-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .form-full {
+            grid-column: 1 / -1;
+        }
+
+        /* --- MEMBERS MODULE STYLES --- */
+        .search-filter-bar {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 2rem;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        .search-container {
+            flex: 1;
+            min-width: 300px;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 16px;
+            color: var(--on-surface-variant);
+            pointer-events: none;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 16px 12px 44px;
+            border: 1px solid rgba(13, 28, 47, 0.12);
+            border-radius: 12px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            background: white;
+            color: var(--on-surface);
+            transition: var(--transition);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(53, 37, 205, 0.1);
+        }
+
+        .filter-section {
+            display: flex;
+            gap: 2rem;
+            align-items: flex-start;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .filter-label {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--on-surface-variant);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .filter-tabs {
+            display: flex;
+            gap: 8px;
+            background: rgba(13, 28, 47, 0.04);
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .filter-tab {
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            color: var(--on-surface-variant);
+            font-weight: 600;
+            font-size: 0.9rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .filter-tab:hover {
+            background: rgba(13, 28, 47, 0.08);
+        }
+
+        .filter-tab.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .filter-select {
+            padding: 8px 12px;
+            border: 1px solid rgba(13, 28, 47, 0.12);
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            background: white;
+            color: var(--on-surface);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(53, 37, 205, 0.1);
+        }
+
+        .table-container {
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .members-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0;
+        }
+
+        .members-table th {
+            text-align: left;
+            padding: 1rem;
+            color: var(--on-surface-variant);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+            background: rgba(13, 28, 47, 0.04);
+        }
+
+        .members-table td {
+            padding: 1.25rem 1rem;
+            background: white;
+            border-bottom: 1px solid rgba(13, 28, 47, 0.08);
+            font-size: 0.95rem;
+        }
+
+        .members-table tbody tr:hover {
+            background: rgba(53, 37, 205, 0.02);
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem 1rem;
+            color: var(--on-surface-variant);
+            text-align: center;
+        }
+
+        .empty-icon {
+            font-size: 3rem;
+            color: rgba(13, 28, 47, 0.2);
+            margin-bottom: 1rem;
+        }
+
+        .empty-state p {
+            font-size: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-icon {
+            padding: 8px 12px;
+            border: none;
+            background: transparent;
+            color: var(--primary);
+            cursor: pointer;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+
+        .btn-icon:hover {
+            background: rgba(53, 37, 205, 0.1);
+        }
+
+        .btn-icon.danger {
+            color: var(--error);
+        }
+
+        .btn-icon.danger:hover {
+            background: rgba(186, 26, 26, 0.1);
+        }
+
+        /* --- MEMBER FORM LAYOUT --- */
+        .member-form-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .form-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            padding: 1.5rem;
+            background: rgba(13, 28, 47, 0.02);
+            border-radius: 12px;
+            border: 1px solid rgba(13, 28, 47, 0.08);
+        }
+
+        .form-section-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--on-surface);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-section-title .material-icons-round {
+            color: var(--primary);
+        }
+
+        .member-form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .member-form-row.full {
+            grid-column: 1 / -1;
+        }
+
+        .member-form-row.single {
+            grid-template-columns: 1fr;
+        }
+
+        /* --- INVOICE MODAL --- */
+        .invoice-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 900px;
+            margin: 0 auto;
+            font-family: 'Inter', sans-serif;
+            color: var(--on-surface);
+        }
+
+        .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .gym-info h2 {
+            font-family: 'Manrope', sans-serif;
+            color: var(--primary);
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .gym-address {
+            font-size: 0.9rem;
+            color: var(--on-surface-variant);
+            line-height: 1.5;
+        }
+
+        .invoice-number {
+            text-align: right;
+        }
+
+        .invoice-number h3 {
+            font-size: 0.9rem;
+            color: var(--on-surface-variant);
+            margin-bottom: 0.25rem;
+        }
+
+        .invoice-number p {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .invoice-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .invoice-section h4 {
+            font-size: 0.85rem;
+            color: var(--on-surface-variant);
+            text-transform: uppercase;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+        }
+
+        .invoice-section p {
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+            line-height: 1.6;
+        }
+
+        .invoice-details {
+            grid-column: 1 / -1;
+            border-top: 1px solid rgba(13, 28, 47, 0.12);
+            padding-top: 1.5rem;
+        }
+
+        .invoice-details table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1rem;
+        }
+
+        .invoice-details th {
+            text-align: left;
+            padding: 0.75rem;
+            background: rgba(53, 37, 205, 0.08);
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--on-surface);
+        }
+
+        .invoice-details td {
+            padding: 0.75rem;
+            border-bottom: 1px solid rgba(13, 28, 47, 0.08);
+            font-size: 0.95rem;
+        }
+
+        .summary-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 2rem;
+            padding: 0.75rem;
+            font-size: 0.95rem;
+        }
+
+        .summary-row.total {
+            background: var(--primary-gradient);
+            color: white;
+            font-weight: 700;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .signature-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(13, 28, 47, 0.12);
+        }
+
+        .signature-block {
+            text-align: center;
+        }
+
+        .signature-line {
+            border-bottom: 1px solid var(--on-surface);
+            height: 40px;
+            margin-bottom: 0.5rem;
+        }
+
+        .signature-label {
+            font-size: 0.85rem;
+            color: var(--on-surface-variant);
+            font-weight: 600;
+        }
+
+        /* --- DASHBOARD METRICS & WIDGETS --- */
+        .metric-card {
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+            gap: 0.75rem;
+        }
+
+        .metric-label {
+            font-size: 0.85rem;
+            color: var(--on-surface-variant);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 800;
+            font-family: 'Manrope', sans-serif;
+            color: var(--on-surface);
+        }
+
+        .metric-trend {
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 0.5rem;
+        }
+
+        .follow-up-widget {
+            padding: 1.5rem;
+            background: white;
+        }
+
+        .widget-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(13, 28, 47, 0.08);
+        }
+
+        .widget-header span.material-icons-round {
+            color: var(--primary);
+            font-size: 1.5rem;
+        }
+
+        .widget-header h4 {
+            flex-grow: 1;
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--on-surface);
+        }
+
+        .widget-count {
+            background: var(--primary);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .follow-up-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .follow-up-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem;
+            background: rgba(13, 28, 47, 0.02);
+            border-radius: 8px;
+            border-left: 3px solid var(--primary);
+        }
+
+        .item-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .item-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--on-surface);
+        }
+
+        .item-detail {
+            font-size: 0.8rem;
+            color: var(--on-surface-variant);
+        }
+
+        .item-detail.warning {
+            color: var(--warning);
+        }
+
+        .item-detail.urgent {
+            color: var(--error);
+        }
+
+        .btn-action {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .btn-action:hover {
+            background: #4f46e5;
+            transform: translateY(-2px);
+        }
+
+        .btn-action span {
+            font-size: 1rem;
+        }
+
+        /* --- CHART CONTAINERS --- */
+        .chart-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 24px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+            margin-bottom: 2rem;
+        }
+
+        .chart-title {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--on-surface);
+        }
+
+        #collectionVsExpensesChart,
+        #revenueByPackageChart {
+            max-height: 400px;
+        }
+
+        /* --- EXPENSE FORM STYLING --- */
+        .expense-form-fields {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .expense-form-fields .form-group {
+            margin-bottom: 0;
+        }
+
+        .expense-form-fields.full {
+            grid-column: 1 / -1;
+        }
+
+        .expense-categories {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+        }
+
+        .category-btn {
+            padding: 10px;
+            border: 2px solid rgba(13, 28, 47, 0.12);
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: var(--transition);
+            color: var(--on-surface-variant);
+        }
+
+        .category-btn:hover,
+        .category-btn.active {
+            border-color: var(--primary);
+            background: rgba(53, 37, 205, 0.08);
+            color: var(--primary);
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+            .invoice-container {
+                max-width: 100%;
+                padding: 0;
+            }
+            .btn-print {
+                display: none;
+            }
+        }
+
+        .scanner-shell {
+            display: grid;
+            grid-template-columns: minmax(360px, 1.1fr) minmax(280px, 0.9fr);
+            gap: 1.5rem;
+            align-items: start;
+        }
+
+        .scanner-reader {
+            min-height: 360px;
+            border-radius: 28px;
+            overflow: hidden;
+            background: var(--surface-container-low);
+            border: 1px solid rgba(13, 28, 47, 0.08);
+        }
+
+        .scanner-reader > div {
+            border-radius: 28px;
+        }
+
+        .scanner-controls {
+            display: flex;
+            gap: 0.85rem;
+            flex-wrap: wrap;
+            margin-top: 1.25rem;
+        }
+
+        .scanner-meta {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .scanner-panel {
+            padding: 1.5rem;
+            border-radius: 24px;
+            background: white;
+            box-shadow: 0 8px 24px rgba(13, 28, 47, 0.06);
+        }
+
+        .scanner-panel h3 {
+            margin-bottom: 0.5rem;
+        }
+
+        .scanner-status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.55rem 0.9rem;
+            border-radius: 999px;
+            background: rgba(53, 37, 205, 0.1);
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 0.82rem;
+            letter-spacing: 0.02em;
+        }
+
+        .scanner-activity-list {
+            display: grid;
+            gap: 0.85rem;
+            margin-top: 1rem;
+        }
+
+        .scanner-activity-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.95rem 1rem;
+            border-radius: 18px;
+            background: var(--surface-container-low);
+        }
+
+        .scanner-activity-item strong {
+            display: block;
+            margin-bottom: 0.18rem;
+        }
+
+        .scanner-empty {
+            padding: 1rem;
+            border-radius: 18px;
+            background: var(--surface-container-low);
+            color: var(--on-surface-variant);
+        }
+
+        .scanner-toast-banner {
+            position: fixed;
+            top: 1.5rem;
+            left: 50%;
+            transform: translate(-50%, -120%);
+            min-width: min(680px, calc(100vw - 2rem));
+            padding: 1.4rem 1.8rem;
+            border-radius: 24px;
+            box-shadow: 0 24px 60px rgba(13, 28, 47, 0.22);
+            z-index: 2400;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 1.15rem;
+            font-weight: 800;
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 0.35s ease, opacity 0.35s ease;
+        }
+
+        .scanner-toast-banner.active {
+            transform: translate(-50%, 0);
+            opacity: 1;
+        }
+
+        .scanner-toast-banner.success {
+            background: #d8f4df;
+            color: #1f5b30;
+        }
+
+        .scanner-toast-banner.error {
+            background: #f4d7d6;
+            color: #7a2724;
+        }
+
+        body.dark-theme .scanner-reader,
+        body.dark-theme .scanner-panel,
+        body.dark-theme .scanner-activity-item,
+        body.dark-theme .scanner-empty {
+            background: #1a1f1c;
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        body.dark-theme .scanner-toast-banner.success {
+            background: #274033;
+            color: #d7f0de;
+        }
+
+        body.dark-theme .scanner-toast-banner.error {
+            background: #4a3231;
+            color: #f3d9d8;
+        }
+
+        @media (max-width: 960px) {
+            .scanner-shell {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Deep Slate & Golden Ochre Design System Overrides */
+        :root {
+            --bg-app: #EAF0F0;
+            --bg-sidebar: #374A47;
+            --bg-surface: #FFFFFF;
+            --text-primary: #1C2B28;
+            --text-secondary: #6A7E7A;
+            --sidebar-text: #FFFFFF;
+            --sidebar-text-muted: #9BAEAA;
+            --brand-primary: #D4A84B;
+            --brand-primary-hover: #C2963B;
+            --brand-secondary: #279A9C;
+            --border-soft: rgba(55, 74, 71, 0.08);
+            --shadow-soft: 0 10px 30px rgba(55, 74, 71, 0.08);
+            --success-bg: color-mix(in srgb, var(--brand-secondary) 16%, var(--bg-surface) 84%);
+            --success-text: #1C2B28;
+            --warning-bg: color-mix(in srgb, var(--brand-primary) 22%, var(--bg-surface) 78%);
+            --warning-text: #5B471B;
+            --error-bg: color-mix(in srgb, #B86A5A 18%, var(--bg-surface) 82%);
+            --error-text: #6D352E;
+            --surface: var(--bg-app);
+            --surface-container-low: var(--bg-sidebar);
+            --surface-container-highest: var(--bg-surface);
+            --on-surface: var(--text-primary);
+            --on-surface-variant: var(--text-secondary);
+            --primary: var(--brand-primary);
+            --primary-gradient: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary) 100%);
+            --success: var(--success-text);
+            --warning: var(--warning-text);
+            --error: var(--error-text);
+        }
+
+        .dark-theme {
+            --bg-app: #1A2220;
+            --bg-sidebar: #222E2C;
+            --bg-surface: #2A3835;
+            --text-primary: #EAF0F0;
+            --text-secondary: #9BAEAA;
+            --sidebar-text: #FFFFFF;
+            --sidebar-text-muted: #7A918D;
+            --brand-primary: #D4A84B;
+            --brand-primary-hover: #E6B95C;
+            --brand-secondary: #30B6B8;
+            --border-soft: rgba(234, 240, 240, 0.05);
+            --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.4);
+            --success-bg: color-mix(in srgb, var(--brand-secondary) 18%, var(--bg-surface) 82%);
+            --success-text: #EAF0F0;
+            --warning-bg: color-mix(in srgb, var(--brand-primary) 18%, var(--bg-surface) 82%);
+            --warning-text: #F2D48C;
+            --error-bg: color-mix(in srgb, #B86A5A 20%, var(--bg-surface) 80%);
+            --error-text: #F0C2BA;
+            --surface: var(--bg-app);
+            --surface-container-low: var(--bg-sidebar);
+            --surface-container-highest: var(--bg-surface);
+            --on-surface: var(--text-primary);
+            --on-surface-variant: var(--text-secondary);
+            --primary: var(--brand-primary);
+            --primary-gradient: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary) 100%);
+            --success: var(--success-text);
+            --warning: var(--warning-text);
+            --error: var(--error-text);
+        }
+
+        body,
+        div,
+        nav,
+        main,
+        section,
+        article,
+        aside,
+        header,
+        footer,
+        form,
+        input,
+        select,
+        textarea,
+        button,
+        table,
+        thead,
+        tbody,
+        tr,
+        td,
+        th,
+        a,
+        span,
+        p {
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-app);
+            color: var(--text-primary);
+        }
+
+        main,
+        .content-wrapper {
+            background: var(--bg-app);
+            color: var(--text-primary);
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6,
+        .display-text,
+        .modal-title,
+        .section-title,
+        .chart-title,
+        .report-metric {
+            font-family: 'Inter', sans-serif;
+            font-weight: 800;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+            margin-top: 0;
+        }
+
+        p,
+        span,
+        label,
+        button,
+        input,
+        select,
+        textarea,
+        td,
+        th,
+        a {
+            font-family: 'Inter', sans-serif;
+        }
+
+        nav.sidebar,
+        .sidebar {
+            background: var(--bg-sidebar);
+            color: var(--sidebar-text);
+            border-right: 1px solid var(--border-soft);
+        }
+
+        .brand,
+        .brand span,
+        .brand .material-icons-round {
+            color: var(--sidebar-text);
+        }
+
+        .nav-item {
+            color: var(--sidebar-text-muted);
+            border-radius: 20px;
+            border: none;
+            transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+        }
+
+        .nav-item .material-icons-round,
+        .nav-item span {
+            color: inherit;
+        }
+
+        .nav-item:hover {
+            color: var(--sidebar-text);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .nav-item.active {
+            background-color: var(--bg-surface);
+            color: var(--bg-sidebar);
+            border-radius: 20px;
+            box-shadow: var(--shadow-soft);
+        }
+
+        .nav-item.active .material-icons-round,
+        .nav-item.active span {
+            color: var(--bg-sidebar);
+        }
+
+        .theme-toggle {
+            background: transparent;
+            color: var(--sidebar-text-muted);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+        }
+
+        .theme-toggle:hover {
+            color: var(--sidebar-text);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .theme-toggle-status {
+            color: var(--brand-primary);
+        }
+
+        .card,
+        .chart-container,
+        .modal-drawer,
+        .payroll-modal,
+        .command-palette,
+        .kanban-column,
+        .pipeline-col,
+        .scanner-panel,
+        .report-card,
+        .invoice-container {
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            border: none;
+            border-radius: 24px;
+            box-shadow: var(--shadow-soft);
+        }
+
+        .card-dark {
+            background: var(--bg-sidebar);
+            color: var(--sidebar-text);
+            border-radius: 24px;
+            box-shadow: var(--shadow-soft);
+        }
+
+        .card-dark h1,
+        .card-dark h2,
+        .card-dark h3,
+        .card-dark .value,
+        .card-dark .label,
+        .card-dark p,
+        .card-dark span {
+            color: var(--sidebar-text);
+        }
+
+        .card-dark .accent,
+        .card-dark .metric-accent,
+        .card-dark .material-icons-round {
+            color: var(--brand-primary);
+        }
+
+        .card-gold {
+            background: var(--brand-primary);
+            color: var(--text-primary);
+            border-radius: 24px;
+            box-shadow: var(--shadow-soft);
+        }
+
+        .card-gold h1,
+        .card-gold h2,
+        .card-gold h3,
+        .card-gold .value,
+        .card-gold .label,
+        .card-gold p,
+        .card-gold span {
+            color: var(--text-primary);
+        }
+
+        .modal-header,
+        .modal-footer,
+        .payroll-modal-header,
+        .command-palette-header {
+            border-color: var(--border-soft);
+        }
+
+        .btn-primary {
+            background: var(--brand-primary);
+            color: var(--text-primary);
+            border: none;
+            border-radius: 99px;
+            font-weight: 700;
+            box-shadow: none;
+            transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            background: var(--brand-primary-hover);
+            color: var(--text-primary);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary,
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-primary);
+            border: 1px solid var(--border-soft);
+            border-radius: 99px;
+            font-weight: 600;
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+        }
+
+        .btn-secondary:hover,
+        .btn-ghost:hover {
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            border-color: var(--brand-secondary);
+            transform: translateY(-1px);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            color: var(--text-primary);
+            background: transparent;
+        }
+
+        .data-table thead th {
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-soft);
+            background: transparent;
+        }
+
+        .data-table tbody td {
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-soft);
+        }
+
+        .data-table tbody tr:hover td {
+            background: color-mix(in srgb, var(--bg-app) 72%, var(--bg-surface) 28%);
+        }
+
+        .status-chip,
+        .status-active,
+        .status-due,
+        .status-urgent {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.42rem 0.8rem;
+            border-radius: 999px;
+            font-size: 0.74rem;
+            font-weight: 800;
+            line-height: 1;
+            border: none;
+        }
+
+        .status-active {
+            background: var(--success-bg);
+            color: var(--success-text);
+        }
+
+        .status-due {
+            background: var(--warning-bg);
+            color: var(--warning-text);
+        }
+
+        .status-urgent {
+            background: var(--error-bg);
+            color: var(--error-text);
+        }
+
+        input,
+        select,
+        textarea,
+        .form-input,
+        .form-select,
+        .form-textarea,
+        .search-input,
+        .filter-select,
+        .command-palette-input {
+            background: var(--bg-app);
+            color: var(--text-primary);
+            border: 1px solid var(--border-soft);
+            border-radius: 16px;
+            outline: none;
+            font-family: 'Inter', sans-serif;
+        }
+
+        input::placeholder,
+        textarea::placeholder,
+        .search-input::placeholder,
+        .command-palette-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus,
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus,
+        .search-input:focus,
+        .filter-select:focus,
+        .command-palette-input:focus {
+            border-color: var(--brand-primary);
+            box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-primary) 18%, transparent);
+        }
+
+        .filter-tab,
+        .settings-tab-btn {
+            background: transparent;
+            color: var(--text-secondary);
+            border: none;
+            border-radius: 99px;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .filter-tab:hover,
+        .settings-tab-btn:hover {
+            background: var(--bg-surface);
+            color: var(--text-primary);
+        }
+
+        .filter-tab.active,
+        .settings-tab-btn.active {
+            background: var(--bg-sidebar);
+            color: var(--sidebar-text);
+        }
+
+        .stat-card .label,
+        .section-subtitle,
+        .empty-state,
+        .toast-message,
+        .command-empty,
+        .report-card p,
+        .scanner-empty,
+        .kanban-count,
+        .invoice-number p {
+            color: var(--text-secondary);
+        }
+
+        .toast {
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            border: none;
+            border-radius: 18px;
+            box-shadow: var(--shadow-soft);
+        }
+
+        .report-icon,
+        .icon-chip,
+        .logo-icon {
+            background: color-mix(in srgb, var(--brand-primary) 18%, transparent);
+            color: var(--brand-primary);
+        }
+
+        .scanner-status-pill,
+        .command-result-type {
+            background: color-mix(in srgb, var(--brand-secondary) 16%, transparent);
+            color: var(--brand-secondary);
+        }
+
+        .whatsapp-link,
+        a {
+            color: var(--brand-secondary);
+        }
+
+        a:hover,
+        .whatsapp-link:hover {
+            color: var(--brand-primary);
+        }
+
+        .member-modal-mode .modal-footer {
+            display: none;
+        }
+
+        .member-modal-mode .modal-header {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            background: var(--bg-surface);
+        }
+
+        .member-modal-mode .modal-content {
+            padding-bottom: 1rem;
+        }
+
+        .member-modal-mode .modal-footer {
+            padding-top: 1.25rem;
+        }
+
+        #btn-save-download {
+            min-width: 260px;
+        }
+
+        #btn-save-download:active,
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .drawer-close-btn {
+            opacity: 0.82;
+        }
+
+        .modal-close:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+        }
+
+        .member-photo-shell {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: 180px 1fr;
+            gap: 1.25rem;
+            align-items: center;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border-radius: 22px;
+            background: var(--bg-app);
+            border: 1px solid var(--border-soft);
+        }
+
+        .member-photo-shell video,
+        .member-photo-shell img {
+            width: 156px;
+            height: 156px;
+            border-radius: 999px;
+            object-fit: cover;
+            background: #d8dfdc;
+            border: 4px solid rgba(255, 255, 255, 0.42);
+            box-shadow: 0 8px 20px rgba(28, 43, 40, 0.1);
+        }
+
+        .member-photo-shell canvas {
+            display: none;
+        }
+
+        .member-photo-meta {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .member-photo-meta h4 {
+            margin: 0;
+            font-size: 1rem;
+            color: var(--text-primary);
+        }
+
+        .member-photo-meta p {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 0.92rem;
+            line-height: 1.6;
+        }
+
+        .member-photo-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-camera {
+            background: var(--brand-secondary);
+            color: #ffffff;
+            border: none;
+            border-radius: 999px;
+            padding: 0.78rem 1.15rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-camera:hover {
+            filter: brightness(1.05);
+            transform: translateY(-1px);
+        }
+
+        .btn-camera:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .member-post-save {
+            display: grid;
+            gap: 0.9rem;
+            color: var(--text-primary);
+        }
+
+        .member-post-save p {
+            margin: 0;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .invoice-container {
+            width: 100%;
+            max-width: 794px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 24px;
+            box-sizing: border-box;
+        }
+
+        .invoice-content,
+        .invoice-details,
+        .invoice-section,
+        .signature-section {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
+        :root {
+            --card-collection-bg: linear-gradient(135deg, #647B8C, #4A5D6B);
+            --card-collection-text: #FFFFFF;
+            --card-collection-accent: #B8D4E3;
+            --card-collection-hover: linear-gradient(135deg, #566A7A, #3F505D);
+
+            --card-active-bg: linear-gradient(135deg, #558074, #3F6359);
+            --card-active-text: #FFFFFF;
+            --card-active-accent: #AEE6D5;
+            --card-active-hover: linear-gradient(135deg, #486E63, #34534A);
+
+            --card-expiring-bg: linear-gradient(135deg, #B57763, #965E4C);
+            --card-expiring-text: #FFFFFF;
+            --card-expiring-accent: #FAD0C3;
+            --card-expiring-hover: linear-gradient(135deg, #A16754, #855141);
+
+            --card-profit-bg: linear-gradient(135deg, #5E876E, #476A54);
+            --card-profit-text: #FFFFFF;
+            --card-profit-accent: #BBEBD1;
+            --card-profit-hover: linear-gradient(135deg, #50755E, #3D5C48);
+        }
+
+        .stat-card {
+            position: relative;
+            overflow: hidden;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 38%);
+            pointer-events: none;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+        }
+
+        .stat-card .metric-label,
+        .stat-card .metric-value,
+        .stat-card .metric-trend,
+        .stat-card .material-icons-round {
+            position: relative;
+            z-index: 1;
+        }
+
+        .stat-card .metric-label {
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .stat-card .metric-value {
+            margin-top: 0.45rem;
+            font-size: 2rem;
+            font-weight: 800;
+            line-height: 1.05;
+        }
+
+        .stat-card .metric-trend {
+            margin-top: 0.95rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.42rem;
+            font-size: 0.88rem;
+            font-weight: 600;
+        }
+
+        .stat-card .material-icons-round {
+            color: inherit;
+        }
+
+        .stat-card-collection {
+            background: var(--card-collection-bg) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+        }
+
+        .stat-card-collection:hover {
+            background: var(--card-collection-hover) !important;
+        }
+
+        .stat-card-collection .metric-value {
+            color: var(--card-collection-text) !important;
+        }
+
+        .stat-card-collection .metric-label,
+        .stat-card-collection .metric-trend,
+        .stat-card-collection .material-icons-round {
+            color: var(--card-collection-accent) !important;
+        }
+
+        .stat-card-active {
+            background: var(--card-active-bg) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+        }
+
+        .stat-card-active:hover {
+            background: var(--card-active-hover) !important;
+        }
+
+        .stat-card-active .metric-value {
+            color: var(--card-active-text) !important;
+        }
+
+        .stat-card-active .metric-label,
+        .stat-card-active .metric-trend,
+        .stat-card-active .material-icons-round {
+            color: var(--card-active-accent) !important;
+        }
+
+        .stat-card-expiring {
+            background: var(--card-expiring-bg) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+        }
+
+        .stat-card-expiring:hover {
+            background: var(--card-expiring-hover) !important;
+        }
+
+        .stat-card-expiring .metric-value {
+            color: var(--card-expiring-text) !important;
+        }
+
+        .stat-card-expiring .metric-label,
+        .stat-card-expiring .metric-trend,
+        .stat-card-expiring .material-icons-round {
+            color: var(--card-expiring-accent) !important;
+        }
+
+        .stat-card-profit {
+            background: var(--card-profit-bg) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+        }
+
+        .stat-card-profit:hover {
+            background: var(--card-profit-hover) !important;
+        }
+
+        .stat-card-profit .metric-value {
+            color: var(--card-profit-text) !important;
+        }
+
+        .stat-card-profit .metric-label,
+        .stat-card-profit .metric-trend,
+        .stat-card-profit .material-icons-round {
+            color: var(--card-profit-accent) !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="sidebar">
+        <div class="brand">
+            <span class="material-icons-round logo-icon">fitness_center</span>
+            <span style="font-family:'Manrope'; font-weight:800; font-size: 1.2rem;">Kinetic Atelier</span>
+        </div>
+        <div class="nav-menu">
+            <div class="nav-item active" data-section="dashboard" onclick="showSection('dashboard')">
+                <span class="material-icons-round">dashboard</span>
+                <span>Dashboard</span>
+            </div>
+            <div class="nav-item" data-section="members" onclick="showSection('members')">
+                <span class="material-icons-round">group</span>
+                <span>Members</span>
+            </div>
+            <div class="nav-item" data-section="attendance" onclick="showSection('attendance')">
+                <span class="material-icons-round">qr_code_scanner</span>
+                <span>Attendance</span>
+            </div>
+            <div class="nav-item" data-section="equipment" onclick="showSection('equipment')">
+                <span class="material-icons-round">fitness_center</span>
+                <span>Equipment</span>
+            </div>
+            <div class="nav-item" data-section="crm" onclick="showSection('crm')">
+                <span class="material-icons-round">leaderboard</span>
+                <span>CRM</span>
+            </div>
+            <div class="nav-item" data-section="finance" onclick="showSection('finance')">
+                <span class="material-icons-round">payments</span>
+                <span>Finance</span>
+            </div>
+            <div class="nav-item" data-section="staff" onclick="showSection('staff')">
+                <span class="material-icons-round">badge</span>
+                <span>Staff</span>
+            </div>
+            <div class="nav-item" data-section="hr-payroll" onclick="showSection('hr-payroll')">
+                <span class="material-icons-round">payments</span>
+                <span>HR & Payroll</span>
+            </div>
+            <div class="nav-item" data-section="reports-hub" onclick="showSection('reports-hub')">
+                <span class="material-icons-round">assessment</span>
+                <span>Reports Hub</span>
+            </div>
+            <div class="nav-item" data-section="settings" onclick="showSection('settings')">
+                <span class="material-icons-round">settings</span>
+                <span>Settings</span>
+            </div>
+        </div>
+        <div class="sidebar-footer">
+            <button id="theme-toggle" class="nav-item theme-toggle" type="button" aria-label="Toggle dark mode">
+                <span class="theme-toggle-meta">
+                    <span id="theme-toggle-icon" class="material-icons-round">dark_mode</span>
+                    <span>Theme</span>
+                </span>
+                <span id="theme-toggle-status" class="theme-toggle-status">Dark</span>
+            </button>
+        </div>
+    </nav>
+
+    <main class="content-wrapper">
+
+        <section id="dashboard-section" class="active">
+            <div class="page-header">
+                <div>
+                    <h1 class="display-text">Operational Pulse</h1>
+                    <p style="color: var(--on-surface-variant)">Real-time health telemetry: Downtown Branch</p>
+                </div>
+                <button class="btn-primary"><span class="material-icons-round">file_download</span> Report</button>
+            </div>
+            
+            <!-- Dashboard Metrics Container -->
+            <div class="grid-stats" data-metrics-container="dashboard"></div>
+            
+            <!-- Follow-up Widgets Row -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 2rem; margin-bottom: 2rem;">
+                <!-- Today's Birthdays Widget -->
+                <div class="card follow-up-widget" data-widget="birthdays"></div>
+                
+                <!-- Renewal Follow-ups Widget -->
+                <div class="card follow-up-widget" data-widget="renewals"></div>
+            </div>
+            
+            <!-- Recent Activity Table -->
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3>Recent Activity</h3>
+                    <div style="display: flex; gap: 1rem;">
+                        <button class="btn-primary" style="padding: 8px 16px; font-size: 0.85rem;" 
+                            onclick="UIComponents.openExpenseForm((data) => { StateManager.Expenses.create(data); UIComponents.showToast('Expense recorded!', 'success', 'Expense Added'); FinanceAnalytics.refresh(); })">
+                            <span class="material-icons-round" style="font-size: 1rem;">add</span> Expense
+                        </button>
+                        <button class="btn-primary" style="padding: 8px 16px; font-size: 0.85rem;" 
+                            onclick="UIComponents.openReceiptForm((data) => { StateManager.Receipts.create(data); UIComponents.showToast('Receipt created!', 'success', 'Receipt Issued'); DashboardAnalytics.refresh(); })">
+                            <span class="material-icons-round" style="font-size: 1rem;">receipt</span> Receipt
+                        </button>
+                    </div>
+                </div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Elena Jaxon</td>
+                            <td>Membership Renewal</td>
+                            <td>₹189</td>
+                            <td><span class="status-chip status-active">Successful</span></td>
+                        </tr>
+                        <tr>
+                            <td>Ryan Kaine</td>
+                            <td>New Signup</td>
+                            <td>₹79</td>
+                            <td><span class="status-chip status-active">Processed</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="members-section">
+            <div class="page-header">
+                <h1 class="display-text">Member Directory</h1>
+                <button class="btn-primary" type="button" id="open-member-drawer-btn">
+                    <span class="material-icons-round">person_add</span> Add Member
+                </button>
+            </div>
+
+            <!-- SEARCH & FILTERS -->
+            <div class="search-filter-bar">
+                <div class="search-container">
+                    <span class="material-icons-round search-icon">search</span>
+                    <input type="text" class="search-input" id="member-search" placeholder="Search by name, email, or phone...">
+                </div>
+                
+                <div class="filter-section">
+                    <div class="filter-group">
+                        <label class="filter-label">Status</label>
+                        <div class="filter-tabs">
+                            <button class="filter-tab active" type="button" data-status="all">All</button>
+                            <button class="filter-tab" type="button" data-status="active">Active</button>
+                            <button class="filter-tab" type="button" data-status="inactive">Inactive</button>
+                        </div>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">Gender</label>
+                        <select class="filter-select" id="gender-filter">
+                            <option value="all">All Genders</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MEMBERS TABLE -->
+            <div class="card table-container">
+                <table class="data-table members-table">
+                    <thead>
+                        <tr>
+                            <th>Member ID</th>
+                            <th>Name</th>
+                            <th>Contact</th>
+                            <th>Package</th>
+                            <th>End Date</th>
+                            <th>Balance</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="members-table-body">
+                        <!-- Rendered by MemberModule.renderMembersTable() -->
+                    </tbody>
+                </table>
+                <div class="empty-state" id="members-empty-state" style="display: none;">
+                    <span class="material-icons-round empty-icon">people_outline</span>
+                    <p>No members found</p>
+                    <button class="btn-secondary" type="button" id="empty-members-open-btn">Add Your First Member</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="attendance-section">
+            <div class="page-header">
+                <div>
+                    <h1 class="display-text">QR Attendance</h1>
+                    <p class="section-subtitle">Scan member QR codes, validate membership, and log attendance in IndexedDB.</p>
+                </div>
+            </div>
+
+            <div class="scanner-shell">
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:1rem;">
+                        <div>
+                            <h3>Scanner Module</h3>
+                            <p style="color: var(--on-surface-variant); margin-top: 0.35rem;">Use the front desk camera to read each member's QR code.</p>
+                        </div>
+                        <span id="attendance-scanner-status" class="scanner-status-pill">
+                            <span class="material-icons-round">camera_alt</span>
+                            Camera idle
+                        </span>
+                    </div>
+                    <div id="attendance-reader" class="scanner-reader"></div>
+                    <div class="scanner-controls">
+                        <button type="button" id="attendance-start-btn" class="btn-primary">
+                            <span class="material-icons-round">play_circle</span> Start Camera
+                        </button>
+                        <button type="button" id="attendance-stop-btn" class="btn-secondary">
+                            <span class="material-icons-round">stop_circle</span> Stop Camera
+                        </button>
+                    </div>
+                </div>
+
+                <div class="scanner-meta">
+                    <div class="scanner-panel">
+                        <h3>Last Scan Result</h3>
+                        <div id="attendance-last-scan" class="scanner-empty">No member scanned yet.</div>
+                    </div>
+
+                    <div class="scanner-panel">
+                        <h3>Today's Check-Ins</h3>
+                        <div id="attendance-log-list" class="scanner-activity-list">
+                            <div class="scanner-empty">Attendance entries will appear here after each successful scan.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="equipment-section">
+            <div class="page-header">
+                <h1 class="display-text">Fleet Registry</h1>
+                <button class="btn-primary" onclick="UIComponents.openPackageForm((data) => {
+                    const pkg = StateManager.Packages.create(data);
+                    UIComponents.showToast('Equipment asset added!', 'success', 'Asset Created');
+                })">
+                    <span class="material-icons-round">add_circle</span> Add Asset
+                </button>
+            </div>
+            <div class="grid-stats">
+                <div class="card">
+                    <h3>Technogym Treadmill</h3>
+                    <p style="font-size: 0.8rem; color: var(--on-surface-variant)">Serial: SKILLRUN-TX-092</p>
+                    <div style="margin-top:1rem"><span class="status-chip status-active">Active</span></div>
+                </div>
+                <div class="card">
+                    <h3>Matrix Leg Press</h3>
+                    <p style="font-size: 0.8rem; color: var(--on-surface-variant)">Serial: MTX-LP-442</p>
+                    <div style="margin-top:1rem"><span class="status-chip status-due">Under Maintenance</span></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="crm-section">
+            <div class="page-header">
+                <h1 class="display-text">Lead Pipeline</h1>
+                <button class="btn-primary" onclick="EnquiryModule.openForm()">
+                    <span class="material-icons-round">add_circle</span> New Enquiry
+                </button>
+            </div>
+            <!-- KANBAN BOARD -->
+            <div class="kanban-board">
+                <!-- NEW INQUIRIES -->
+                <div class="kanban-column">
+                    <div class="kanban-header">
+                        <h3 class="kanban-title">New Inquiry</h3>
+                        <span class="kanban-count" id="count-new">0</span>
+                    </div>
+                    <div class="kanban-cards" id="cards-new"></div>
+                </div>
+
+                <!-- CONTACTED -->
+                <div class="kanban-column">
+                    <div class="kanban-header">
+                        <h3 class="kanban-title">Contacted</h3>
+                        <span class="kanban-count" id="count-contacted">0</span>
+                    </div>
+                    <div class="kanban-cards" id="cards-contacted"></div>
+                </div>
+
+                <!-- CONVERTED -->
+                <div class="kanban-column">
+                    <div class="kanban-header">
+                        <h3 class="kanban-title">Converted</h3>
+                        <span class="kanban-count" id="count-converted">0</span>
+                    </div>
+                    <div class="kanban-cards" id="cards-converted"></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="finance-section">
+            <div class="page-header">
+                <h1 class="display-text">Financial Analytics</h1>
+                <button class="btn-primary" onclick="UIComponents.openExpenseForm((data) => { StateManager.Expenses.create(data); UIComponents.showToast('Expense recorded!', 'success', 'Expense Added'); FinanceAnalytics.refresh(); })">
+                    <span class="material-icons-round">add</span> Log Expense
+                </button>
+            </div>
+            
+            <!-- Finance Metrics Container -->
+            <div class="grid-stats" data-metrics-container="finance"></div>
+            
+            <!-- Charts Row -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); gap: 2rem;">
+                <!-- Collection vs Expenses Chart -->
+                <div class="chart-container">
+                    <h3 class="chart-title">Collection vs Expenses (YTD)</h3>
+                    <canvas id="collectionVsExpensesChart"></canvas>
+                </div>
+                
+                <!-- Revenue by Package Chart -->
+                <div class="chart-container">
+                    <h3 class="chart-title">Revenue by Package</h3>
+                    <canvas id="revenueByPackageChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="staff-section">
+            <div class="page-header">
+                <h1 class="display-text">Staff Ecosystem</h1>
+                <button class="btn-primary" onclick="UIComponents.openStaffForm((data) => {
+                    const staff = StateManager.Staff.create(data);
+                    UIComponents.showToast(`Staff member ${data.firstName} ${data.lastName} added successfully!`, 'success', 'Staff Member Created');
+                    renderHrPayrollTable();
+                })">
+                    <span class="material-icons-round">badge</span> Add Staff
+                </button>
+            </div>
+            <div class="card">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Staff Member</th>
+                            <th>Role</th>
+                            <th>Outlets</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Marcus Thorne</td>
+                            <td>Trainer</td>
+                            <td>Downtown</td>
+                            <td><span class="status-chip status-active">Active</span></td>
+                        </tr>
+                        <tr>
+                            <td>Riley King</td>
+                            <td>Front Desk</td>
+                            <td>North Point</td>
+                            <td><span class="status-chip status-urgent">Inactive</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="hr-payroll-section">
+            <div class="page-header">
+                <div>
+                    <h1 class="display-text">HR & Payroll</h1>
+                    <p class="section-subtitle">Attendance operations and salary settlement for the current cycle.</p>
+                </div>
+            </div>
+            <div class="hr-shell">
+                <div class="card">
+                    <div class="hr-toolbar">
+                        <div class="hr-kpi">
+                            <span class="material-icons-round">today</span>
+                            <span id="hr-payroll-date-label">Today</span>
+                        </div>
+                        <div class="hr-kpi">
+                            <span class="material-icons-round">groups</span>
+                            <span id="hr-payroll-summary">0 staff tracked</span>
+                        </div>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Staff Member</th>
+                                <th>Role</th>
+                                <th>Today's Attendance</th>
+                                <th>Present Days</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="hr-payroll-table-body"></tbody>
+                    </table>
+                    <div class="empty-state" id="hr-payroll-empty-state" style="display: none;">
+                        <span class="material-icons-round">badge</span>
+                        <p>No staff records found. Add staff members to start tracking attendance and payroll.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="reports-hub-section">
+            <div class="page-header">
+                <div>
+                    <h1 class="display-text">Reports Hub</h1>
+                    <p class="section-subtitle">Export operational datasets and executive snapshots as clean CSV files.</p>
+                </div>
+            </div>
+            <div class="reports-grid">
+                <div class="card report-card">
+                    <div class="report-card-head">
+                        <div>
+                            <h3>All Members List</h3>
+                            <div id="report-members-metric" class="report-metric">0</div>
+                        </div>
+                        <div class="report-icon">
+                            <span class="material-icons-round">groups</span>
+                        </div>
+                    </div>
+                    <p>Full member directory with package, balance, and renewal data for external analysis or audits.</p>
+                    <button type="button" class="btn-primary" onclick="downloadReportCsv('members')">
+                        <span class="material-icons-round">download</span> Download CSV
+                    </button>
+                </div>
+
+                <div class="card report-card">
+                    <div class="report-card-head">
+                        <div>
+                            <h3>This Month's Revenue</h3>
+                            <div id="report-revenue-metric" class="report-metric">₹0</div>
+                        </div>
+                        <div class="report-icon">
+                            <span class="material-icons-round">currency_rupee</span>
+                        </div>
+                    </div>
+                    <p>Current-month receipt and revenue ledger grouped for finance reporting and cash-flow reviews.</p>
+                    <button type="button" class="btn-primary" onclick="downloadReportCsv('revenue')">
+                        <span class="material-icons-round">download</span> Download CSV
+                    </button>
+                </div>
+
+                <div class="card report-card">
+                    <div class="report-card-head">
+                        <div>
+                            <h3>Unpaid Renewals</h3>
+                            <div id="report-renewals-metric" class="report-metric">0</div>
+                        </div>
+                        <div class="report-icon">
+                            <span class="material-icons-round">event_repeat</span>
+                        </div>
+                    </div>
+                    <p>Members with outstanding balances and renewal pressure, ready for follow-up or collections outreach.</p>
+                    <button type="button" class="btn-primary" onclick="downloadReportCsv('renewals')">
+                        <span class="material-icons-round">download</span> Download CSV
+                    </button>
+                </div>
+
+                <div class="card report-card">
+                    <div class="report-card-head">
+                        <div>
+                            <h3>Staff Payroll</h3>
+                            <div id="report-payroll-metric" class="report-metric">0</div>
+                        </div>
+                        <div class="report-icon">
+                            <span class="material-icons-round">badge</span>
+                        </div>
+                    </div>
+                    <p>Processed payroll records including working days, incentives, and net payable salary per staff member.</p>
+                    <button type="button" class="btn-primary" onclick="downloadReportCsv('payroll')">
+                        <span class="material-icons-round">download</span> Download CSV
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section id="settings-section">
+            <div class="page-header">
+                <h1 class="display-text">Master Configuration</h1>
+                <p style="color: var(--on-surface-variant)">Manage company profile, packages, and tax settings</p>
+            </div>
+
+            <!-- SETTINGS TABS -->
+            <div class="card">
+                <div class="settings-tabs">
+                    <button class="settings-tab-btn active" data-tab="company">
+                        <span class="material-icons-round">business</span>
+                        Company Profile
+                    </button>
+                    <button class="settings-tab-btn" data-tab="packages">
+                        <span class="material-icons-round">card_membership</span>
+                        Packages & Courses
+                    </button>
+                    <button class="settings-tab-btn" data-tab="tax">
+                        <span class="material-icons-round">receipt</span>
+                        Tax Configuration
+                    </button>
+                </div>
+
+                <!-- TAB PANELS -->
+                <div class="settings-tab-panel active" id="tab-company">
+                    <!-- Rendered by SettingsModule.renderCompanyProfileTab() -->
+                </div>
+
+                <div class="settings-tab-panel" id="tab-packages">
+                    <!-- Rendered by SettingsModule.renderPackagesTab() -->
+                </div>
+
+                <div class="settings-tab-panel" id="tab-tax">
+                    <!-- Rendered by SettingsModule.renderTaxTab() -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <div id="scanner-toast-banner" class="scanner-toast-banner" aria-live="assertive"></div>
+
+    <!-- MODAL/DRAWER SYSTEM -->
+    <div id="modal-overlay" class="modal-overlay"></div>
+    <div id="modal-drawer" class="modal-drawer">
+        <div class="modal-header">
+            <h2 class="modal-title" id="modal-title">Add New Record</h2>
+            <button type="button" id="close-member-drawer" class="drawer-close-btn" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-content drawer-body" id="modal-body">
+            <!-- Form content will be injected here -->
+        </div>
+        <div class="modal-footer drawer-footer" id="modal-footer">
+            <button type="button" class="btn-secondary" id="modal-cancel-btn" onclick="UIComponents.closeModal()">Cancel</button>
+            <button type="button" class="btn-primary" id="modal-submit-btn" onclick="UIComponents.submitForm()">Save Record</button>
+        </div>
+    </div>
+
+    <div id="command-palette-overlay" class="command-palette-overlay" aria-hidden="true">
+        <div class="command-palette" role="dialog" aria-modal="true" aria-labelledby="command-palette-input">
+            <div class="command-palette-header">
+                <span class="material-icons-round">search</span>
+                <input
+                    id="command-palette-input"
+                    class="command-palette-input"
+                    type="text"
+                    placeholder="Search members and enquiries..."
+                    autocomplete="off">
+            </div>
+            <div id="command-palette-results" class="command-palette-results">
+                <div class="command-empty">Start typing to search members and enquiries.</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="payroll-modal-overlay" class="payroll-modal-overlay" aria-hidden="true">
+        <div class="payroll-modal" role="dialog" aria-modal="true" aria-labelledby="payroll-modal-title">
+            <div class="payroll-modal-header">
+                <div>
+                    <h2 class="modal-title" id="payroll-modal-title">Salary Settlement Calculator</h2>
+                    <p id="payroll-modal-staff-name" class="section-subtitle">Preparing payroll record</p>
+                </div>
+                <button class="modal-close" type="button" onclick="closePayrollModal()">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <div class="payroll-modal-body">
+                <form id="payroll-form">
+                    <input type="hidden" id="payroll-staff-id" name="staffId">
+                    <div class="payroll-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="payroll-basic-salary">Basic Salary</label>
+                            <input class="form-input" type="number" id="payroll-basic-salary" name="basicSalary" min="0" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="payroll-total-days">Total Working Days</label>
+                            <input class="form-input" type="number" id="payroll-total-days" name="totalWorkingDays" min="1" step="1" value="30" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="payroll-present-days">Present Days</label>
+                            <input class="form-input" type="number" id="payroll-present-days" name="presentDays" min="0" step="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="payroll-incentives">Incentives (₹)</label>
+                            <input class="form-input" type="number" id="payroll-incentives" name="incentives" min="0" step="0.01" value="0">
+                        </div>
+                    </div>
+                    <div class="payroll-summary">
+                        <div>
+                            <div class="payroll-summary-label">Net Payable Salary</div>
+                            <div id="payroll-summary-caption" class="section-subtitle">Calculated live from attendance and incentives.</div>
+                        </div>
+                        <div id="payroll-net-pay" class="payroll-summary-value">₹0.00</div>
+                    </div>
+                    <div class="payroll-modal-actions">
+                        <button type="button" class="btn-secondary" onclick="closePayrollModal()">Cancel</button>
+                        <button type="submit" class="btn-primary">Save Payroll</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="state-management.js"></script>
+    <script src="ui-components.js"></script>
+    <script src="settings-management.js"></script>
+    <script src="enquiry-module.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="members-module.js"></script>
+    <script src="settings-module.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
+    <script src="state-management-indexeddb.js"></script>
+    <script type="module" src="auth-guard.js"></script>
+    <script>
+        const WhatsAppUtils = {
+            normalizeNumber(value = '') {
+                const digits = String(value).replace(/\D/g, '');
+                if (digits.length === 10) {
+                    return `91${digits}`;
+                }
+
+                if (digits.length > 10 && digits.startsWith('91')) {
+                    return digits;
+                }
+
+                return digits;
+            },
+
+            buildLink(phoneNumber, message = 'Hello from Kinetic Atelier.') {
+                const normalizedNumber = this.normalizeNumber(phoneNumber);
+                if (!normalizedNumber) {
+                    return '#';
+                }
+
+                return `https://wa.me/${normalizedNumber}?text=${encodeURIComponent(message)}`;
+            },
+
+            createContactLink(phoneNumber, message) {
+                if (!phoneNumber) {
+                    return 'N/A';
+                }
+
+                const href = this.buildLink(phoneNumber, message);
+                return `<a class="whatsapp-link" href="${href}" target="_blank" rel="noopener noreferrer">${escapeHtml(phoneNumber)}</a>`;
+            },
+
+            openLink(phoneNumber, message) {
+                const href = this.buildLink(phoneNumber, message);
+                if (href !== '#') {
+                    window.open(href, '_blank', 'noopener,noreferrer');
+                }
+            },
+
+            openPaymentReminder(phoneNumber, memberName, balance, dueDate) {
+                const safeName = memberName || 'Member';
+                const formattedBalance = formatINR(balance);
+                const reminderMessage = `Hello ${safeName}, this is a gentle reminder from Kinetic Atelier. Your pending balance is ${formattedBalance}${dueDate ? ` and your renewal date is ${dueDate}` : ''}. Please let us know if you need any assistance with the payment.`;
+                this.openLink(phoneNumber, reminderMessage);
+            },
+
+            openMemberPaymentReminder(memberId) {
+                const member = typeof StateManager !== 'undefined' ? StateManager.Members.getById(memberId) : null;
+                if (!member) {
+                    return;
+                }
+
+                const fullName = [member.firstName, member.lastName].filter(Boolean).join(' ');
+                this.openPaymentReminder(member.contact, fullName, member.balance, member.endDate);
+            }
+        };
+
+        window.WhatsAppUtils = WhatsAppUtils;
+
+        /**
+         * SPA NAVIGATION LOGIC
+         * Handles dynamic section switching and active state management
+         */
+        function showSection(sectionId) {
+            if (sectionId !== 'attendance') {
+                stopAttendanceScanner();
+            }
+
+            // 1. Hide all sections
+            const sections = document.querySelectorAll('section');
+            sections.forEach(section => {
+                section.classList.remove('active');
+            });
+
+            // 2. Show requested section
+            const targetSection = document.getElementById(sectionId + '-section');
+            if (targetSection) {
+                targetSection.classList.add('active');
+                
+                // Special handling for CRM section - render Kanban board
+                if (sectionId === 'crm' && typeof EnquiryModule !== 'undefined') {
+                    EnquiryModule.renderKanbanBoard();
+                }
+
+                // Special handling for members section - render members table
+                if (sectionId === 'members' && typeof MemberModule !== 'undefined') {
+                    MemberModule.renderMembersTable();
+                }
+
+                if (sectionId === 'attendance') {
+                    renderAttendanceActivity();
+                }
+
+                if (sectionId === 'hr-payroll') {
+                    renderHrPayrollTable();
+                }
+
+                if (sectionId === 'reports-hub') {
+                    renderReportsHub();
+                }
+            }
+
+            // 3. Update Sidebar UI
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.section === sectionId) {
+                    item.classList.add('active');
+                }
+            });
+
+            // 4. Scroll to top of content
+            document.querySelector('.content-wrapper').scrollTop = 0;
+        }
+
+        const THEME_STORAGE_KEY = 'ka_theme_preference';
+
+        function setTheme(theme) {
+            const isDark = theme === 'dark';
+            document.body.classList.toggle('dark-theme', isDark);
+            localStorage.setItem(THEME_STORAGE_KEY, theme);
+
+            const themeIcon = document.getElementById('theme-toggle-icon');
+            const themeStatus = document.getElementById('theme-toggle-status');
+
+            if (themeIcon) {
+                themeIcon.textContent = isDark ? 'light_mode' : 'dark_mode';
+            }
+
+            if (themeStatus) {
+                themeStatus.textContent = isDark ? 'Light' : 'Dark';
+            }
+        }
+
+        function getStoredCollection(keys) {
+            for (const key of keys) {
+                try {
+                    const rawValue = localStorage.getItem(key);
+                    if (!rawValue) {
+                        continue;
+                    }
+
+                    const parsed = JSON.parse(rawValue);
+                    if (Array.isArray(parsed)) {
+                        return parsed;
+                    }
+                } catch (error) {
+                    console.warn(`[CommandPalette] Unable to parse ${key}`, error);
+                }
+            }
+
+            return [];
+        }
+
+        function normalizeCommandResults(query) {
+            const members = getStoredCollection(['members', 'ka_members']).map(member => ({
+                id: member.id || member.memberId || `${member.firstName || ''}-${member.lastName || ''}`,
+                name: [member.firstName, member.lastName].filter(Boolean).join(' ') || member.name || 'Unnamed Member',
+                meta: [member.email, member.contact || member.contactNo, member.package].filter(Boolean).join(' • '),
+                type: 'Member',
+                section: 'members',
+                icon: 'group'
+            }));
+
+            const enquiries = getStoredCollection(['enquiries', 'ka_enquiries']).map(enquiry => ({
+                id: enquiry.id || enquiry.contactNo || enquiry.name,
+                name: enquiry.name || 'Unnamed Enquiry',
+                meta: [enquiry.contactNo, enquiry.enquiryFor, enquiry.stage].filter(Boolean).join(' • '),
+                type: 'Enquiry',
+                section: 'crm',
+                icon: 'leaderboard'
+            }));
+
+            const allResults = [...members, ...enquiries];
+            const normalizedQuery = query.trim().toLowerCase();
+
+            if (!normalizedQuery) {
+                return allResults.slice(0, 8);
+            }
+
+            return allResults
+                .filter(item => `${item.name} ${item.meta} ${item.type}`.toLowerCase().includes(normalizedQuery))
+                .slice(0, 8);
+        }
+
+        function escapeHtml(value) {
+            const htmlEscapes = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            };
+
+            return String(value).replace(/[&<>\"']/g, character => htmlEscapes[character]);
+        }
+
+        function renderCommandResults(query) {
+            const resultsContainer = document.getElementById('command-palette-results');
+            if (!resultsContainer) {
+                return;
+            }
+
+            const results = normalizeCommandResults(query);
+
+            if (results.length === 0) {
+                resultsContainer.innerHTML = '<div class="command-empty">No matching members or enquiries found.</div>';
+                return;
+            }
+
+            resultsContainer.innerHTML = results.map(result => `
+                <button class="command-result" type="button" data-section="${escapeHtml(result.section)}" data-name="${escapeHtml(result.name)}">
+                    <span class="command-result-main">
+                        <span class="command-result-icon material-icons-round">${escapeHtml(result.icon)}</span>
+                        <span>
+                            <span class="command-result-name">${escapeHtml(result.name)}</span>
+                            <div class="command-result-meta">${escapeHtml(result.meta || 'No extra details available')}</div>
+                        </span>
+                    </span>
+                    <span class="command-result-type">${escapeHtml(result.type)}</span>
+                </button>
+            `).join('');
+        }
+
+        function openCommandPalette() {
+            const overlay = document.getElementById('command-palette-overlay');
+            const input = document.getElementById('command-palette-input');
+            if (!overlay || !input) {
+                return;
+            }
+
+            overlay.classList.add('active');
+            overlay.setAttribute('aria-hidden', 'false');
+            input.value = '';
+            renderCommandResults('');
+            requestAnimationFrame(() => input.focus());
+        }
+
+        function closeCommandPalette() {
+            const overlay = document.getElementById('command-palette-overlay');
+            const input = document.getElementById('command-palette-input');
+            if (!overlay || !input) {
+                return;
+            }
+
+            overlay.classList.remove('active');
+            overlay.setAttribute('aria-hidden', 'true');
+            input.value = '';
+        }
+
+        let attendanceScannerInstance = null;
+        let attendanceScannerRunning = false;
+        let lastAttendanceScan = { value: '', timestamp: 0 };
+        let scannerToastTimeout = null;
+
+        function createBeepAudio() {
+            const sampleRate = 22050;
+            const durationSeconds = 0.16;
+            const frameCount = Math.floor(sampleRate * durationSeconds);
+            const audioBuffer = new ArrayBuffer(44 + frameCount * 2);
+            const view = new DataView(audioBuffer);
+            const writeText = (offset, text) => {
+                for (let index = 0; index < text.length; index += 1) {
+                    view.setUint8(offset + index, text.charCodeAt(index));
+                }
+            };
+
+            writeText(0, 'RIFF');
+            view.setUint32(4, 36 + frameCount * 2, true);
+            writeText(8, 'WAVE');
+            writeText(12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, 1, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true);
+            view.setUint16(32, 2, true);
+            view.setUint16(34, 16, true);
+            writeText(36, 'data');
+            view.setUint32(40, frameCount * 2, true);
+
+            for (let index = 0; index < frameCount; index += 1) {
+                const envelope = 1 - (index / frameCount);
+                const sample = Math.sin((2 * Math.PI * 880 * index) / sampleRate) * 0.35 * envelope;
+                view.setInt16(44 + (index * 2), sample * 32767, true);
+            }
+
+            const audioBlob = new Blob([audioBuffer], { type: 'audio/wav' });
+            return new Audio(URL.createObjectURL(audioBlob));
+        }
+
+        const attendanceBeep = createBeepAudio();
+
+        function updateAttendanceScannerStatus(label, icon = 'camera_alt') {
+            const statusPill = document.getElementById('attendance-scanner-status');
+            if (!statusPill) {
+                return;
+            }
+
+            statusPill.innerHTML = `<span class="material-icons-round">${escapeHtml(icon)}</span>${escapeHtml(label)}`;
+        }
+
+        function showScannerToast(message, type = 'success') {
+            const toastBanner = document.getElementById('scanner-toast-banner');
+            if (!toastBanner) {
+                return;
+            }
+
+            toastBanner.className = `scanner-toast-banner ${type}`;
+            toastBanner.textContent = message;
+            toastBanner.classList.add('active');
+
+            clearTimeout(scannerToastTimeout);
+            scannerToastTimeout = setTimeout(() => {
+                toastBanner.classList.remove('active');
+            }, 2800);
+        }
+
+        function normalizeMemberStatus(member) {
+            const endDate = member?.endDate ? new Date(member.endDate) : null;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (String(member?.status || '').toLowerCase() === 'inactive') {
+                return false;
+            }
+
+            if (!endDate || Number.isNaN(endDate.getTime())) {
+                return true;
+            }
+
+            endDate.setHours(0, 0, 0, 0);
+            return endDate >= today;
+        }
+
+        async function hydrateIndexedMemberMirror() {
+            if (!window.AsyncStateManager?.Members?.upsert || !window.AsyncStateManager?.Members?.getAll) {
+                return;
+            }
+
+            const indexedMembers = await AsyncStateManager.Members.getAll();
+            if (indexedMembers.length > 0) {
+                return;
+            }
+
+            const existingMembers = getCollectionFromStorage(['members', 'ka_members'], () => StateManager?.Members?.getAll?.());
+            await Promise.all(existingMembers.map(member => {
+                if (!member?.id) {
+                    return Promise.resolve();
+                }
+
+                return AsyncStateManager.Members.upsert({
+                    ...member,
+                    memberId: member.memberId || member.id
+                });
+            }));
+        }
+
+        async function getIndexedMembers() {
+            if (window.AsyncStateManager?.Members?.getAll) {
+                const indexedMembers = await AsyncStateManager.Members.getAll();
+                if (indexedMembers.length > 0) {
+                    return indexedMembers;
+                }
+            }
+
+            return getCollectionFromStorage(['members', 'ka_members'], () => StateManager?.Members?.getAll?.());
+        }
+
+        async function findMemberByQrValue(memberId) {
+            const normalizedId = String(memberId || '').trim();
+            if (!normalizedId) {
+                return null;
+            }
+
+            const members = await getIndexedMembers();
+            return members.find(member => String(member.memberId || member.id || '').trim() === normalizedId) || null;
+        }
+
+        async function saveAttendanceLog(record) {
+            if (window.AsyncStateManager?.Attendance?.create) {
+                return AsyncStateManager.Attendance.create(record);
+            }
+
+            const fallbackRecords = getStoredCollection(['ka_attendance']);
+            fallbackRecords.push({
+                id: `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                ...record
+            });
+            localStorage.setItem('ka_attendance', JSON.stringify(fallbackRecords));
+            return record;
+        }
+
+        async function getAttendanceLogs() {
+            if (window.AsyncStateManager?.Attendance?.getAll) {
+                return AsyncStateManager.Attendance.getAll();
+            }
+
+            return getStoredCollection(['ka_attendance']);
+        }
+
+        async function renderAttendanceActivity() {
+            const activityList = document.getElementById('attendance-log-list');
+            if (!activityList) {
+                return;
+            }
+
+            const logs = await getAttendanceLogs();
+            const today = getTodayIsoDate();
+            const todaysLogs = logs
+                .filter(log => String(log.timestamp || '').startsWith(today))
+                .sort((left, right) => new Date(right.timestamp) - new Date(left.timestamp))
+                .slice(0, 8);
+
+            if (todaysLogs.length === 0) {
+                activityList.innerHTML = '<div class="scanner-empty">Attendance entries will appear here after each successful scan.</div>';
+                return;
+            }
+
+            activityList.innerHTML = todaysLogs.map(log => `
+                <div class="scanner-activity-item">
+                    <div>
+                        <strong>${escapeHtml(log.memberName || 'Unnamed Member')}</strong>
+                        <div style="color: var(--on-surface-variant); font-size: 0.84rem;">${escapeHtml(log.memberId || 'Unknown ID')}</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <strong>${escapeHtml((log.membershipState || 'active').toUpperCase())}</strong>
+                        <div style="color: var(--on-surface-variant); font-size: 0.84rem;">${new Date(log.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function handleAttendanceScan(decodedText) {
+            const now = Date.now();
+            const normalizedScan = String(decodedText || '').trim();
+
+            if (!normalizedScan) {
+                return;
+            }
+
+            if (lastAttendanceScan.value === normalizedScan && (now - lastAttendanceScan.timestamp) < 2500) {
+                return;
+            }
+
+            lastAttendanceScan = { value: normalizedScan, timestamp: now };
+
+            const member = await findMemberByQrValue(normalizedScan);
+            const lastScanCard = document.getElementById('attendance-last-scan');
+
+            if (!member) {
+                if (lastScanCard) {
+                    lastScanCard.innerHTML = `<strong>Unknown QR code</strong><div style="margin-top:0.4rem; color: var(--on-surface-variant);">No member record matched ID ${escapeHtml(normalizedScan)}.</div>`;
+                }
+                showScannerToast('Alert: Member record not found!', 'error');
+                UIComponents?.showToast('No member record matched this QR code.', 'error', 'Scan Failed');
+                return;
+            }
+
+            const fullName = [member.firstName, member.lastName].filter(Boolean).join(' ') || member.name || 'Member';
+            const isActive = normalizeMemberStatus(member);
+            const timestamp = new Date().toISOString();
+
+            await saveAttendanceLog({
+                memberRecordId: member.id || '',
+                memberId: member.memberId || normalizedScan,
+                memberName: fullName,
+                timestamp,
+                membershipState: isActive ? 'active' : 'expired'
+            });
+
+            attendanceBeep.currentTime = 0;
+            attendanceBeep.play().catch(() => {});
+
+            if (lastScanCard) {
+                lastScanCard.innerHTML = `
+                    <strong>${escapeHtml(fullName)}</strong>
+                    <div style="margin-top:0.4rem; color: var(--on-surface-variant);">${escapeHtml(member.memberId || normalizedScan)} • ${new Date(timestamp).toLocaleString('en-IN')}</div>
+                    <div style="margin-top:0.6rem; font-weight:700; color:${isActive ? 'var(--success)' : 'var(--error)'};">
+                        ${isActive ? 'Plan active' : 'Membership expired'}
+                    </div>
+                `;
+            }
+
+            await renderAttendanceActivity();
+
+            if (isActive) {
+                showScannerToast(`Welcome, ${fullName}! Plan active.`, 'success');
+                UIComponents?.showToast(`Welcome, ${fullName}! Plan active.`, 'success', 'Attendance Logged');
+            } else {
+                showScannerToast('Alert: Membership Expired!', 'error');
+                UIComponents?.showToast(`Alert: Membership expired for ${fullName}.`, 'error', 'Expired Plan');
+            }
+        }
+
+        async function startAttendanceScanner() {
+            const readerElement = document.getElementById('attendance-reader');
+            if (!readerElement || typeof Html5Qrcode === 'undefined') {
+                UIComponents?.showToast('QR scanner library is not available.', 'error', 'Scanner Error');
+                return;
+            }
+
+            if (attendanceScannerRunning) {
+                return;
+            }
+
+            attendanceScannerInstance = attendanceScannerInstance || new Html5Qrcode('attendance-reader');
+
+            try {
+                updateAttendanceScannerStatus('Starting camera...', 'autorenew');
+
+                await attendanceScannerInstance.start(
+                    { facingMode: 'environment' },
+                    {
+                        fps: 10,
+                        qrbox: { width: 220, height: 220 },
+                        aspectRatio: 1.2
+                    },
+                    handleAttendanceScan,
+                    () => {}
+                );
+
+                attendanceScannerRunning = true;
+                updateAttendanceScannerStatus('Camera live', 'qr_code_scanner');
+            } catch (error) {
+                console.error('[AttendanceScanner] Unable to start camera', error);
+                updateAttendanceScannerStatus('Camera unavailable', 'error');
+                UIComponents?.showToast('Unable to access the camera for QR scanning.', 'error', 'Camera Error');
+            }
+        }
+
+        async function stopAttendanceScanner() {
+            if (!attendanceScannerInstance || !attendanceScannerRunning) {
+                updateAttendanceScannerStatus('Camera idle', 'camera_alt');
+                return;
+            }
+
+            try {
+                await attendanceScannerInstance.stop();
+                await attendanceScannerInstance.clear();
+            } catch (error) {
+                console.warn('[AttendanceScanner] Scanner stop encountered an issue', error);
+            } finally {
+                attendanceScannerRunning = false;
+                attendanceScannerInstance = null;
+                updateAttendanceScannerStatus('Camera idle', 'camera_alt');
+            }
+        }
+
+        const ATTENDANCE_STORAGE_KEY = 'staff_attendance';
+        let activePayrollStaff = null;
+
+        function getTodayIsoDate() {
+            return new Date().toISOString().split('T')[0];
+        }
+
+        function formatReadableDate(dateString) {
+            return new Date(dateString).toLocaleDateString('en-IN', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric'
+            });
+        }
+
+        function formatINR(amount) {
+            const normalizedValue = typeof amount === 'string'
+                ? amount.replace(/[^0-9.-]+/g, '')
+                : amount;
+            const parsedAmount = Number(normalizedValue);
+
+            return new Intl.NumberFormat('en-IN', {
+                style: 'currency',
+                currency: 'INR',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(Number.isFinite(parsedAmount) ? parsedAmount : 0);
+        }
+
+        function formatCurrency(amount) {
+            return formatINR(amount);
+        }
+
+        async function downloadInvoicePDF(filename = 'invoice.pdf', sourceElement = null) {
+            const invoiceElement = sourceElement || document.querySelector('.invoice-container');
+            if (!invoiceElement || typeof html2pdf === 'undefined') {
+                UIComponents?.showToast('Invoice PDF generator is unavailable.', 'error', 'PDF Error');
+                return;
+            }
+
+            const options = {
+                margin: [10, 10, 12, 10],
+                filename,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: {
+                    scale: 2,
+                    useCORS: true,
+                    backgroundColor: '#ffffff',
+                    scrollY: 0
+                },
+                jsPDF: {
+                    unit: 'mm',
+                    format: 'a4',
+                    orientation: 'portrait'
+                },
+                pagebreak: {
+                    mode: ['avoid-all', 'css', 'legacy']
+                }
+            };
+
+            try {
+                await html2pdf().set(options).from(invoiceElement).save();
+                UIComponents?.showToast('Invoice PDF downloaded successfully.', 'success', 'PDF Ready');
+            } catch (error) {
+                console.error('[InvoicePDF] Download failed', error);
+                UIComponents?.showToast('Unable to generate invoice PDF.', 'error', 'PDF Error');
+            }
+        }
+
+        function getAttendanceRecords() {
+            try {
+                return JSON.parse(localStorage.getItem(ATTENDANCE_STORAGE_KEY) || '[]');
+            } catch (error) {
+                console.warn('[HRPayroll] Unable to parse attendance records', error);
+                return [];
+            }
+        }
+
+        function getAllStaffRecords() {
+            const legacyStaff = getStoredCollection(['staff']);
+            if (legacyStaff.length > 0) {
+                return legacyStaff;
+            }
+
+            if (typeof StateManager !== 'undefined' && StateManager.Staff) {
+                return StateManager.Staff.getAll();
+            }
+
+            return getStoredCollection(['ka_staff']);
+        }
+
+        function getStaffById(staffId) {
+            return getAllStaffRecords().find(staff => staff.id === staffId) || null;
+        }
+
+        function saveAttendanceRecords(records) {
+            localStorage.setItem(ATTENDANCE_STORAGE_KEY, JSON.stringify(records));
+        }
+
+        function getAttendanceForStaff(staffId, date = getTodayIsoDate()) {
+            return getAttendanceRecords().find(record => record.staffId === staffId && record.date === date) || null;
+        }
+
+        function getPresentDaysThisMonth(staffId, referenceDate = new Date()) {
+            const currentYear = referenceDate.getFullYear();
+            const currentMonth = referenceDate.getMonth();
+
+            return getAttendanceRecords().filter(record => {
+                if (record.staffId !== staffId || record.status !== 'present') {
+                    return false;
+                }
+
+                const recordDate = new Date(record.date);
+                return recordDate.getFullYear() === currentYear && recordDate.getMonth() === currentMonth;
+            }).length;
+        }
+
+        function markStaffAttendance(staffId, status) {
+            const today = getTodayIsoDate();
+            const attendanceRecords = getAttendanceRecords();
+            const existingIndex = attendanceRecords.findIndex(record => record.staffId === staffId && record.date === today);
+            const nextRecord = {
+                staffId,
+                date: today,
+                status,
+                updatedAt: new Date().toISOString()
+            };
+
+            if (existingIndex >= 0) {
+                attendanceRecords[existingIndex] = { ...attendanceRecords[existingIndex], ...nextRecord };
+            } else {
+                attendanceRecords.push(nextRecord);
+            }
+
+            saveAttendanceRecords(attendanceRecords);
+            renderHrPayrollTable();
+            renderReportsHub();
+            renderReportsHub();
+            renderReportsHub();
+
+            if (typeof UIComponents !== 'undefined') {
+                UIComponents.showToast(`Attendance marked ${status} for today.`, 'success', 'Attendance Updated');
+            }
+        }
+
+        function calculateNetSalary(basicSalary, totalWorkingDays, presentDays, incentives) {
+            const normalizedBasic = Number(basicSalary) || 0;
+            const normalizedTotal = Math.max(Number(totalWorkingDays) || 0, 1);
+            const normalizedPresent = Number(presentDays) || 0;
+            const normalizedIncentives = Number(incentives) || 0;
+
+            return ((normalizedBasic / normalizedTotal) * normalizedPresent) + normalizedIncentives;
+        }
+
+        function updatePayrollCalculation() {
+            const basicSalary = document.getElementById('payroll-basic-salary')?.value;
+            const totalWorkingDays = document.getElementById('payroll-total-days')?.value;
+            const presentDays = document.getElementById('payroll-present-days')?.value;
+            const incentives = document.getElementById('payroll-incentives')?.value;
+            const netPayElement = document.getElementById('payroll-net-pay');
+
+            if (!netPayElement) {
+                return 0;
+            }
+
+            const netPay = calculateNetSalary(basicSalary, totalWorkingDays, presentDays, incentives);
+            netPayElement.textContent = formatCurrency(netPay);
+            return netPay;
+        }
+
+        function openPayrollModal(staffId) {
+            const staff = getStaffById(staffId);
+            const modalOverlay = document.getElementById('payroll-modal-overlay');
+            const form = document.getElementById('payroll-form');
+            if (!staff || !modalOverlay || !form) {
+                return;
+            }
+
+            activePayrollStaff = staff;
+            const payrollHistory = StateManager.Payroll.getByStaffId(staffId);
+            const latestPayroll = payrollHistory[payrollHistory.length - 1];
+            const presentDays = getPresentDaysThisMonth(staffId);
+
+            document.getElementById('payroll-modal-staff-name').textContent = `${[staff.firstName, staff.lastName].filter(Boolean).join(' ')} • ${staff.role || 'Staff Member'}`;
+            document.getElementById('payroll-staff-id').value = staff.id;
+            document.getElementById('payroll-basic-salary').value = latestPayroll?.basicSalary ?? staff.salary ?? 0;
+            document.getElementById('payroll-total-days').value = latestPayroll?.totalWorkingDays ?? 30;
+            document.getElementById('payroll-present-days').value = latestPayroll?.presentDays ?? presentDays;
+            document.getElementById('payroll-incentives').value = 0;
+
+            updatePayrollCalculation();
+            modalOverlay.classList.add('active');
+            modalOverlay.setAttribute('aria-hidden', 'false');
+            requestAnimationFrame(() => document.getElementById('payroll-basic-salary')?.focus());
+        }
+
+        function closePayrollModal() {
+            const modalOverlay = document.getElementById('payroll-modal-overlay');
+            const form = document.getElementById('payroll-form');
+            if (!modalOverlay || !form) {
+                return;
+            }
+
+            modalOverlay.classList.remove('active');
+            modalOverlay.setAttribute('aria-hidden', 'true');
+            form.reset();
+            document.getElementById('payroll-net-pay').textContent = formatCurrency(0);
+            activePayrollStaff = null;
+        }
+
+        function getAttendanceStatusMarkup(status) {
+            if (status === 'present') {
+                return '<span class="attendance-status present"><span class="material-icons-round">check_circle</span>Present</span>';
+            }
+
+            if (status === 'absent') {
+                return '<span class="attendance-status absent"><span class="material-icons-round">cancel</span>Absent</span>';
+            }
+
+            return '<span class="attendance-status unmarked"><span class="material-icons-round">schedule</span>Unmarked</span>';
+        }
+
+        function renderHrPayrollTable() {
+            const staffList = getAllStaffRecords();
+            const tableBody = document.getElementById('hr-payroll-table-body');
+            const emptyState = document.getElementById('hr-payroll-empty-state');
+            const summary = document.getElementById('hr-payroll-summary');
+            const dateLabel = document.getElementById('hr-payroll-date-label');
+
+            if (!tableBody || !emptyState || !summary || !dateLabel) {
+                return;
+            }
+
+            dateLabel.textContent = `Today • ${formatReadableDate(getTodayIsoDate())}`;
+            summary.textContent = `${staffList.length} staff tracked`;
+
+            if (staffList.length === 0) {
+                tableBody.innerHTML = '';
+                emptyState.style.display = 'flex';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            tableBody.innerHTML = staffList.map(staff => {
+                const fullName = [staff.firstName, staff.lastName].filter(Boolean).join(' ') || 'Unnamed Staff';
+                const todaysAttendance = getAttendanceForStaff(staff.id);
+                const presentDays = getPresentDaysThisMonth(staff.id);
+
+                return `
+                    <tr>
+                        <td>
+                            <div style="font-weight: 700;">${escapeHtml(fullName)}</div>
+                            <div style="color: var(--on-surface-variant); font-size: 0.84rem;">${escapeHtml(staff.email || staff.phone || 'No contact details')}</div>
+                        </td>
+                        <td>${escapeHtml(staff.role || 'Unassigned')}</td>
+                        <td>${getAttendanceStatusMarkup(todaysAttendance?.status)}</td>
+                        <td>${presentDays}</td>
+                        <td>
+                            <div class="attendance-actions">
+                                <button type="button" class="btn-secondary btn-small btn-success" onclick="markStaffAttendance('${staff.id}', 'present')">Mark Present</button>
+                                <button type="button" class="btn-secondary btn-small btn-danger" onclick="markStaffAttendance('${staff.id}', 'absent')">Mark Absent</button>
+                                <button type="button" class="btn-secondary btn-small btn-ghost" onclick="openPayrollModal('${staff.id}')">Process Payroll</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function submitPayrollForm(event) {
+            event.preventDefault();
+
+            if (!activePayrollStaff) {
+                return;
+            }
+
+            const basicSalary = Number(document.getElementById('payroll-basic-salary').value) || 0;
+            const totalWorkingDays = Number(document.getElementById('payroll-total-days').value) || 0;
+            const presentDays = Number(document.getElementById('payroll-present-days').value) || 0;
+            const incentives = Number(document.getElementById('payroll-incentives').value) || 0;
+
+            if (basicSalary <= 0 || totalWorkingDays <= 0 || presentDays < 0) {
+                UIComponents.showToast('Enter valid salary and attendance values before saving payroll.', 'error', 'Validation Error');
+                return;
+            }
+
+            const netPayableSalary = calculateNetSalary(basicSalary, totalWorkingDays, presentDays, incentives);
+            StateManager.Payroll.create({
+                staffId: activePayrollStaff.id,
+                staffName: [activePayrollStaff.firstName, activePayrollStaff.lastName].filter(Boolean).join(' '),
+                basicSalary,
+                totalWorkingDays,
+                presentDays,
+                incentives,
+                netPayableSalary,
+                payrollDate: getTodayIsoDate()
+            });
+
+            closePayrollModal();
+            renderHrPayrollTable();
+            renderReportsHub();
+            UIComponents.showToast('Payroll record saved successfully.', 'success', 'Payroll Processed');
+        }
+
+        window.markStaffAttendance = markStaffAttendance;
+        window.openPayrollModal = openPayrollModal;
+        window.closePayrollModal = closePayrollModal;
+
+        function getCollectionFromStorage(preferredKeys = [], stateAccessor) {
+            const storedCollection = getStoredCollection(preferredKeys);
+            if (storedCollection.length > 0) {
+                return storedCollection;
+            }
+
+            if (typeof stateAccessor === 'function') {
+                return stateAccessor() || [];
+            }
+
+            return [];
+        }
+
+        function normalizeDateValue(record) {
+            return record.date || record.createdAt || record.payrollDate || record.startDate || '';
+        }
+
+        function getMembersReportData() {
+            return getCollectionFromStorage(['members', 'ka_members'], () => StateManager.Members.getAll());
+        }
+
+        function getRevenueReportData() {
+            const receipts = getCollectionFromStorage(['receipts', 'ka_receipts'], () => StateManager.Receipts.getAll());
+            const now = new Date();
+
+            return receipts
+                .filter(receipt => {
+                    const sourceDate = normalizeDateValue(receipt);
+                    if (!sourceDate) {
+                        return false;
+                    }
+
+                    const receiptDate = new Date(sourceDate);
+                    return receiptDate.getFullYear() === now.getFullYear() && receiptDate.getMonth() === now.getMonth();
+                })
+                .map(receipt => ({
+                    receiptId: receipt.id || '',
+                    memberName: receipt.memberName || receipt.name || receipt.customerName || '',
+                    amount: Number(receipt.amount) || 0,
+                    paymentMode: receipt.paymentMode || receipt.mode || '',
+                    status: receipt.status || '',
+                    receiptDate: normalizeDateValue(receipt)
+                }));
+        }
+
+        function getUnpaidRenewalsReportData() {
+            const today = new Date();
+
+            return getMembersReportData()
+                .filter(member => {
+                    const balance = Number(member.balance) || 0;
+                    if (balance > 0) {
+                        return true;
+                    }
+
+                    if (!member.endDate) {
+                        return false;
+                    }
+
+                    const renewalDate = new Date(member.endDate);
+                    return renewalDate <= today;
+                })
+                .map(member => ({
+                    memberId: member.memberId || member.id || '',
+                    memberName: [member.firstName, member.lastName].filter(Boolean).join(' ') || member.name || '',
+                    package: member.package || member.membershipPlan || '',
+                    renewalDate: member.endDate || '',
+                    balance: Number(member.balance) || 0,
+                    status: member.status || ''
+                }));
+        }
+
+        function getPayrollReportData() {
+            return getCollectionFromStorage(['payroll'], () => StateManager.Payroll.getAll());
+        }
+
+        function getReportDataset(reportType) {
+            switch (reportType) {
+                case 'members':
+                    return getMembersReportData();
+                case 'revenue':
+                    return getRevenueReportData();
+                case 'renewals':
+                    return getUnpaidRenewalsReportData();
+                case 'payroll':
+                    return getPayrollReportData();
+                default:
+                    return [];
+            }
+        }
+
+        function getReportFilename(reportType) {
+            const dateStamp = getTodayIsoDate();
+
+            switch (reportType) {
+                case 'members':
+                    return `all-members-list-${dateStamp}.csv`;
+                case 'revenue':
+                    return `monthly-revenue-${dateStamp}.csv`;
+                case 'renewals':
+                    return `unpaid-renewals-${dateStamp}.csv`;
+                case 'payroll':
+                    return `staff-payroll-${dateStamp}.csv`;
+                default:
+                    return `report-${dateStamp}.csv`;
+            }
+        }
+
+        function csvSanitizeValue(value) {
+            if (value === null || value === undefined) {
+                return '';
+            }
+
+            if (value instanceof Date) {
+                return value.toISOString();
+            }
+
+            if (typeof value === 'object') {
+                return JSON.stringify(value);
+            }
+
+            return String(value);
+        }
+
+        function exportToCSV(dataArray, filename) {
+            if (!Array.isArray(dataArray)) {
+                throw new TypeError('exportToCSV expects an array of objects.');
+            }
+
+            if (dataArray.length === 0) {
+                if (typeof UIComponents !== 'undefined') {
+                    UIComponents.showToast('There is no data available to export for this report.', 'info', 'Nothing to Export');
+                }
+                return false;
+            }
+
+            const headers = Array.from(
+                dataArray.reduce((headerSet, row) => {
+                    if (row && typeof row === 'object' && !Array.isArray(row)) {
+                        Object.keys(row).forEach(key => headerSet.add(key));
+                    }
+                    return headerSet;
+                }, new Set())
+            );
+
+            if (headers.length === 0) {
+                throw new Error('CSV export requires object rows with at least one key.');
+            }
+
+            const escapeCsvCell = (value) => {
+                const sanitized = csvSanitizeValue(value).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+                return `"${sanitized.replace(/"/g, '""')}"`;
+            };
+
+            const csvRows = [
+                headers.map(escapeCsvCell).join(','),
+                ...dataArray.map(row => headers.map(header => escapeCsvCell(row?.[header])).join(','))
+            ];
+
+            const csvContent = `\uFEFF${csvRows.join('\r\n')}`;
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const blobUrl = URL.createObjectURL(blob);
+            const downloadLink = document.createElement('a');
+
+            downloadLink.href = blobUrl;
+            downloadLink.download = filename || `export-${Date.now()}.csv`;
+            downloadLink.style.display = 'none';
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 0);
+            return true;
+        }
+
+        function downloadReportCsv(reportType) {
+            try {
+                const dataset = getReportDataset(reportType);
+                const didExport = exportToCSV(dataset, getReportFilename(reportType));
+
+                if (didExport && typeof UIComponents !== 'undefined') {
+                    UIComponents.showToast('CSV download started successfully.', 'success', 'Report Exported');
+                }
+            } catch (error) {
+                console.error('[ReportsHub] CSV export failed', error);
+                if (typeof UIComponents !== 'undefined') {
+                    UIComponents.showToast('Unable to generate this CSV right now.', 'error', 'Export Failed');
+                }
+            }
+        }
+
+        function renderReportsHub() {
+            const members = getMembersReportData();
+            const revenue = getRevenueReportData();
+            const unpaidRenewals = getUnpaidRenewalsReportData();
+            const payroll = getPayrollReportData();
+            const revenueTotal = revenue.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+
+            const membersMetric = document.getElementById('report-members-metric');
+            const revenueMetric = document.getElementById('report-revenue-metric');
+            const renewalsMetric = document.getElementById('report-renewals-metric');
+            const payrollMetric = document.getElementById('report-payroll-metric');
+
+            if (membersMetric) {
+                membersMetric.textContent = String(members.length);
+            }
+
+            if (revenueMetric) {
+                revenueMetric.textContent = formatCurrency(revenueTotal);
+            }
+
+            if (renewalsMetric) {
+                renewalsMetric.textContent = String(unpaidRenewals.length);
+            }
+
+            if (payrollMetric) {
+                payrollMetric.textContent = String(payroll.length);
+            }
+        }
+
+        window.exportToCSV = exportToCSV;
+        window.downloadReportCsv = downloadReportCsv;
+
+        // ============ INITIALIZATION & DEMO ============
+        window.addEventListener('DOMContentLoaded', async () => {
+            setTheme(localStorage.getItem(THEME_STORAGE_KEY) || 'light');
+
+            const themeToggle = document.getElementById('theme-toggle');
+            const commandPaletteOverlay = document.getElementById('command-palette-overlay');
+            const commandPaletteInput = document.getElementById('command-palette-input');
+            const commandPaletteResults = document.getElementById('command-palette-results');
+            const payrollModalOverlay = document.getElementById('payroll-modal-overlay');
+            const payrollForm = document.getElementById('payroll-form');
+            const attendanceStartButton = document.getElementById('attendance-start-btn');
+            const attendanceStopButton = document.getElementById('attendance-stop-btn');
+
+            if (window.AsyncStateManager?.initialize) {
+                await AsyncStateManager.initialize();
+                await hydrateIndexedMemberMirror();
+            }
+
+            themeToggle?.addEventListener('click', () => {
+                const nextTheme = document.body.classList.contains('dark-theme') ? 'light' : 'dark';
+                setTheme(nextTheme);
+            });
+
+            commandPaletteInput?.addEventListener('input', (event) => {
+                renderCommandResults(event.target.value);
+            });
+
+            commandPaletteOverlay?.addEventListener('click', (event) => {
+                if (event.target === commandPaletteOverlay) {
+                    closeCommandPalette();
+                }
+            });
+
+            commandPaletteResults?.addEventListener('click', (event) => {
+                const button = event.target.closest('.command-result');
+                if (!button) {
+                    return;
+                }
+
+                const targetName = button.dataset.name || 'record';
+                const targetSection = button.dataset.section;
+                closeCommandPalette();
+
+                if (targetSection) {
+                    showSection(targetSection);
+                }
+
+                if (typeof UIComponents !== 'undefined') {
+                    UIComponents.showToast(`Navigating to ${targetName}...`, 'info', 'Command Palette');
+                }
+            });
+
+            payrollForm?.addEventListener('submit', submitPayrollForm);
+
+            document.querySelectorAll('#payroll-basic-salary, #payroll-total-days, #payroll-present-days, #payroll-incentives').forEach(input => {
+                input.addEventListener('input', updatePayrollCalculation);
+            });
+
+            payrollModalOverlay?.addEventListener('click', (event) => {
+                if (event.target === payrollModalOverlay) {
+                    closePayrollModal();
+                }
+            });
+
+            attendanceStartButton?.addEventListener('click', () => {
+                startAttendanceScanner();
+            });
+
+            attendanceStopButton?.addEventListener('click', () => {
+                stopAttendanceScanner();
+            });
+
+            document.addEventListener('keydown', (event) => {
+                const isModifierPressed = event.ctrlKey || event.metaKey;
+                const isCommandShortcut = event.key.toLowerCase() === 'k';
+                const isPaletteOpen = commandPaletteOverlay?.classList.contains('active');
+                const isPayrollModalOpen = payrollModalOverlay?.classList.contains('active');
+
+                if (isModifierPressed && isCommandShortcut) {
+                    event.preventDefault();
+                    openCommandPalette();
+                    return;
+                }
+
+                if (event.key === 'Escape' && isPaletteOpen) {
+                    closeCommandPalette();
+                }
+
+                if (event.key === 'Escape' && isPayrollModalOpen) {
+                    closePayrollModal();
+                }
+            });
+            console.log('%c╔══════════════════════════════════════════╗', 'color: #3525cd; font-weight: bold');
+            console.log('%c║  Kinetic Atelier CRM - Ready to Deploy  ║', 'color: #3525cd; font-weight: bold');
+            console.log('%c╚══════════════════════════════════════════╝', 'color: #3525cd; font-weight: bold');
+            renderHrPayrollTable();
+            renderReportsHub();
+
+            // Database Summary
+            const stats = StateManager.getStats();
+            console.log('%c📊 Database Status:', 'color: #2e7d32; font-weight: bold', stats);
+
+            // API Reference
+            console.log('%c\n💡 Available APIs:', 'color: #4f46e5; font-weight: bold');
+            console.log('   State Management:\n   • StateManager.Members.create(data)\n   • StateManager.Members.getAll()\n   • StateManager.Enquiries.create(data)\n   • StateManager.Staff.create(data)\n   • StateManager.Expenses.create(data)\n   • StateManager.Packages.create(data)\n   • StateManager.Receipts.create(data)');
+            console.log('   UI Components:\n   • UIComponents.openMemberForm(callback)\n   • UIComponents.openEnquiryForm(callback)\n   • UIComponents.openStaffForm(callback)\n   • UIComponents.openExpenseForm(callback)\n   • UIComponents.openPackageForm(callback)\n   • UIComponents.openReceiptForm(callback)\n   • UIComponents.showToast(message, type, title, duration)');
+            console.log('   Enquiry Module (CRM):\n   • EnquiryModule.openForm()          - Open enquiry form with BMI calculator\n   • EnquiryModule.renderKanbanBoard() - Render CRM pipeline\n   • EnquiryModule.calculateBMI()     - Calculate BMI from height/weight');
+            console.log('   Member Module:\n   • MemberModule.openForm()           - Open member registration form\n   • MemberModule.renderMembersTable() - Render filtered members table\n   • MemberModule.filterStatus(status) - Filter by Active/Inactive\n   • MemberModule.viewInvoice(memberId) - View member invoice');
+
+            // Quick Test Commands
+            console.log('%c\n⚡ Try these commands in console:', 'color: #ed6c02; font-weight: bold');
+            console.log('   StateManager.getStats()                    // View all records\n   StateManager.Members.getAll()            // Get all members\n   MemberModule.renderMembersTable()        // Render members list\n   UIComponents.showToast("Hello!", "success", "Test")  // Test toast\n   StateManager.clearAll()                   // Reset database');
+            renderAttendanceActivity();
+        });
+    </script>
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Analytics Modules -->
+    <script src="dashboard-analytics.js"></script>
+    <script src="finance-analytics.js"></script>
+</body>
+
+</html>
