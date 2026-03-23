@@ -21,6 +21,9 @@ const MemberModule = (() => {
     let eventsBound = false;
     let memberCameraStream = null;
     let modalLifecycleBound = false;
+    let drawerControlsBound = false;
+    let currentEditMember = null;
+    let memberSubmitInFlight = false;
 
     /**
      * MEMBER FORM CONFIGURATION
@@ -290,6 +293,18 @@ const MemberModule = (() => {
         }
     };
 
+    const yieldToBrowser = () => new Promise((resolve) => {
+        requestAnimationFrame(() => {
+            setTimeout(resolve, 0);
+        });
+    });
+
+    const closeMemberDrawer = () => {
+        memberSubmitInFlight = false;
+        resetMemberModalState();
+        closeModal('modal-drawer');
+    };
+
     const syncPhotoPreview = (imageData) => {
         const video = document.getElementById('webcam-stream');
         const hiddenInput = document.getElementById('member-photo-data');
@@ -407,43 +422,40 @@ const MemberModule = (() => {
         observer.observe(drawer, { attributes: true, attributeFilter: ['class'] });
     };
 
-    const bindActiveDrawerActions = (editMember = null) => {
-        const drawer = document.getElementById('modal-drawer');
-        const overlay = document.getElementById('modal-overlay');
-        const form = document.getElementById('add-member-form');
-        const closeButton = document.getElementById('close-member-drawer');
-        const saveButton = drawer?.querySelector('#modal-footer #btn-save-download');
+    const bindDrawerControls = () => {
+        if (drawerControlsBound) return;
+        drawerControlsBound = true;
 
-        const closeDrawer = () => {
-            resetMemberModalState();
-            UIComponents.closeModal();
-        };
+        document.body.addEventListener('click', (event) => {
+            const target = event.target.closest('#btn-start-camera, #btn-snap-photo, #btn-save-download');
+            if (!target) return;
 
-        if (closeButton) {
-            closeButton.onclick = () => {
-                closeDrawer();
-            };
-        }
-
-        if (overlay) {
-            overlay.onclick = (event) => {
-                if (event.target === overlay) {
-                    closeDrawer();
-                }
-            };
-        }
-
-        if (saveButton) {
-            saveButton.onclick = (event) => {
+            if (target.id === 'btn-start-camera') {
                 event.preventDefault();
-                console.log('Save Clicked');
-                form?.requestSubmit();
-            };
-        }
+                startMemberCamera();
+                return;
+            }
 
-        if (form) {
-            form.onsubmit = (event) => handleMemberFormSubmit(event, editMember);
-        }
+            if (target.id === 'btn-snap-photo') {
+                event.preventDefault();
+                captureMemberPhoto();
+                return;
+            }
+
+            if (target.id === 'btn-save-download') {
+                event.preventDefault();
+                if (memberSubmitInFlight) return;
+                console.log('Save Clicked');
+                document.getElementById('add-member-form')?.requestSubmit();
+                return;
+            }
+        });
+
+        document.body.addEventListener('submit', (event) => {
+            const form = event.target.closest('#add-member-form');
+            if (!form) return;
+            handleMemberFormSubmit(event, currentEditMember);
+        });
     };
 
     const getDaysUntilDate = (value) => {
@@ -516,7 +528,7 @@ const MemberModule = (() => {
         const modal = document.querySelector('.modal-drawer');
         modal?.querySelector('button:last-child')?.addEventListener('click', () => {
             openMemberWhatsApp(member, 'welcome');
-            UIComponents.closeModal();
+            closeModal('modal-drawer');
         }, { once: true });
     };
 
@@ -526,10 +538,14 @@ const MemberModule = (() => {
         tempWrapper.style.left = '-9999px';
         tempWrapper.style.top = '0';
         tempWrapper.style.width = '794px';
+        tempWrapper.style.pointerEvents = 'none';
+        tempWrapper.style.opacity = '0';
         tempWrapper.innerHTML = generateInvoiceHTML(memberData);
         document.body.appendChild(tempWrapper);
 
         try {
+            await yieldToBrowser();
+
             const qrContainer = tempWrapper.querySelector('#member-qr-code');
             if (qrContainer && typeof QRCode !== 'undefined') {
                 qrContainer.innerHTML = '';
@@ -543,7 +559,7 @@ const MemberModule = (() => {
                 });
             }
 
-            await new Promise(resolve => setTimeout(resolve, 150));
+            await yieldToBrowser();
             const safeMemberId = String(memberData.memberId || 'invoice').replace(/[^\w-]+/g, '-');
             await downloadInvoicePDF(`${safeMemberId}.pdf`, tempWrapper.querySelector('.invoice-container'));
         } finally {
@@ -636,6 +652,7 @@ const MemberModule = (() => {
      * Open member form modal
      */
     const openForm = (editMember = null) => {
+        currentEditMember = editMember;
         const title = editMember ? `Edit Member - ${editMember.firstName} ${editMember.lastName}` : 'Add New Member';
         const formHTML = `
             <form id="add-member-form" novalidate>
@@ -665,8 +682,7 @@ const MemberModule = (() => {
             ValidationUtils.attachLiveValidation(modal);
         }
 
-        bindMemberCameraActions();
-        bindActiveDrawerActions(editMember);
+        bindDrawerControls();
         setTimeout(setupFormListeners, 100);
     };
 
@@ -703,6 +719,7 @@ const MemberModule = (() => {
      */
     const handleMemberFormSubmit = async (event, editMember = null) => {
         event.preventDefault();
+        if (memberSubmitInFlight) return;
 
         const modal = document.querySelector('.modal-drawer');
         const form = modal?.querySelector('#add-member-form');
@@ -714,6 +731,7 @@ const MemberModule = (() => {
         let savedMember = null;
 
         try {
+            memberSubmitInFlight = true;
             if (!fullName || !phone) {
                 UIComponents.showToast('Name and phone are required.', 'error', 'Validation Error');
                 return;
@@ -729,7 +747,7 @@ const MemberModule = (() => {
 
             if (submitButton) {
                 submitButton.disabled = true;
-                submitButton.textContent = 'Saving...';
+                submitButton.textContent = 'Processing...';
             }
 
             const memberData = {
@@ -777,6 +795,7 @@ const MemberModule = (() => {
                 renderReportsHub();
             }
 
+            await yieldToBrowser();
             await downloadMemberInvoice(savedMember);
             didPersist = true;
         } catch (error) {
@@ -788,8 +807,10 @@ const MemberModule = (() => {
                 submitButton.textContent = 'Save & Download Invoice';
             }
 
+            memberSubmitInFlight = false;
+
             if (didPersist) {
-                UIComponents.closeModal();
+                closeMemberDrawer();
                 UIComponents.showToast(
                     `Member ${fullName} ${editMember ? 'updated' : 'added'} successfully!`,
                     'success',

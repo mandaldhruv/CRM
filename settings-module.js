@@ -6,16 +6,206 @@
  */
 
 const SettingsModule = (() => {
+    const PACKAGES_STORAGE_KEY = 'packages';
+    const DEFAULT_PACKAGES = [
+        { id: 1, name: 'Standard', durationMonths: 1, price: 2500 },
+        { id: 2, name: 'Quarterly', durationMonths: 3, price: 7000 },
+        { id: 3, name: 'Annual', durationMonths: 12, price: 24000 }
+    ];
+
     let currentTab = 'company';
+    let eventsBound = false;
+    let packages = [];
+
+    const escapeHtml = (value) => String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+    const initializePackagesState = () => {
+        const storedPackages = JSON.parse(localStorage.getItem(PACKAGES_STORAGE_KEY)) || [];
+        packages = Array.isArray(storedPackages) ? storedPackages : [];
+
+        if (packages.length === 0) {
+            packages = [...DEFAULT_PACKAGES];
+            persistPackages();
+        }
+    };
+
+    const persistPackages = () => {
+        localStorage.setItem(PACKAGES_STORAGE_KEY, JSON.stringify(packages));
+    };
+
+    const getPackageById = (packageId) => {
+        return packages.find((pkg) => String(pkg.id) === String(packageId)) || null;
+    };
+
+    const openPackageModal = (packageId = '') => {
+        const modal = document.getElementById('package-modal');
+        const title = document.getElementById('package-modal-title');
+        const hiddenId = document.getElementById('package-id');
+        const nameInput = document.getElementById('package-name');
+        const durationInput = document.getElementById('package-duration');
+        const priceInput = document.getElementById('package-price');
+
+        if (!modal || !title || !hiddenId || !nameInput || !durationInput || !priceInput) return;
+
+        const selectedPackage = packageId ? getPackageById(packageId) : null;
+        title.textContent = selectedPackage ? 'Edit Package' : 'Add Package';
+        hiddenId.value = selectedPackage?.id || '';
+        nameInput.value = selectedPackage?.name || '';
+        durationInput.value = selectedPackage?.durationMonths || '';
+        priceInput.value = selectedPackage?.price || '';
+
+        modal.classList.add('active');
+        modal.setAttribute('aria-hidden', 'false');
+        nameInput.focus();
+    };
+
+    const closePackageModal = () => {
+        closeModal('package-modal');
+    };
+
+    const renderPackages = () => {
+        const container = document.getElementById('packages-list-container');
+        if (!container) return;
+
+        if (packages.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 3rem 1rem; color: var(--on-surface-variant);">
+                    <span class="material-icons-round" style="font-size: 3rem; color: rgba(13, 28, 47, 0.3);">package2</span>
+                    <p style="margin-top: 1rem;">No packages created yet</p>
+                    <button type="button" class="btn-primary" data-package-action="add" style="margin-top: 1rem;">
+                        Create Your First Package
+                    </button>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = packages.map((pkg) => `
+            <div class="package-row" data-package-id="${pkg.id}">
+                <div class="package-info">
+                    <h4>${escapeHtml(pkg.name)}</h4>
+                    <p>${pkg.durationMonths} month${pkg.durationMonths !== 1 ? 's' : ''} • Base: ${formatINR(pkg.price)}</p>
+                </div>
+                <div class="package-actions">
+                    <button type="button" class="btn-secondary edit-btn" data-id="${pkg.id}" aria-label="Edit package" style="padding: 8px 16px; font-size: 0.85rem;">
+                        <span class="material-icons-round" style="font-size: 1rem;">edit</span>
+                    </button>
+                    <button type="button" class="btn-danger delete-btn" data-id="${pkg.id}" aria-label="Delete package" style="padding: 8px 16px; font-size: 0.85rem;">
+                        <span class="material-icons-round" style="font-size: 1rem;">delete</span>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    };
+
+    const bindPackageEvents = () => {
+        if (eventsBound) return;
+        eventsBound = true;
+
+        const packagesContainer = document.getElementById('tab-packages');
+        const packageModal = document.getElementById('package-modal');
+        const packageForm = document.getElementById('package-form');
+        const cancelButton = document.getElementById('cancel-package-btn');
+
+        packagesContainer?.addEventListener('click', (event) => {
+            const addButton = event.target.closest('[data-package-action="add"]');
+            if (addButton) {
+                openPackageModal();
+                return;
+            }
+
+            const editButton = event.target.closest('.edit-btn');
+            if (editButton) {
+                const packageId = editButton.dataset.id;
+                if (!packageId) return;
+                openPackageModal(packageId);
+                return;
+            }
+
+            const deleteButton = event.target.closest('.delete-btn');
+            if (deleteButton) {
+                const packageId = deleteButton.dataset.id;
+                if (!packageId) return;
+                deletePackage(packageId, true);
+            }
+        });
+
+        cancelButton?.addEventListener('click', () => {
+            closePackageModal();
+        });
+
+        packageForm?.addEventListener('submit', (event) => {
+            event.preventDefault();
+
+            const hiddenId = document.getElementById('package-id');
+            const nameInput = document.getElementById('package-name');
+            const durationInput = document.getElementById('package-duration');
+            const priceInput = document.getElementById('package-price');
+
+            if (!hiddenId || !nameInput || !durationInput || !priceInput) return;
+
+            const name = nameInput.value.trim();
+            const durationMonths = Number(durationInput.value);
+            const price = Number(priceInput.value);
+            const existingId = hiddenId.value.trim();
+
+            if (!name || durationMonths <= 0 || price < 0) {
+                UIComponents.showToast('Please enter a valid package name, duration, and price.', 'error', 'Validation Error');
+                return;
+            }
+
+            const duplicate = packages.some((pkg) =>
+                String(pkg.id) !== String(existingId) &&
+                pkg.name.trim().toLowerCase() === name.toLowerCase() &&
+                Number(pkg.durationMonths) === durationMonths
+            );
+
+            if (duplicate) {
+                UIComponents.showToast('A package with the same name and duration already exists.', 'error', 'Duplicate Package');
+                return;
+            }
+
+            if (existingId) {
+                packages = packages.map((pkg) => (
+                    String(pkg.id) === String(existingId)
+                        ? { ...pkg, name, durationMonths, price }
+                        : pkg
+                ));
+            } else {
+                packages.push({
+                    id: Date.now(),
+                    name,
+                    durationMonths,
+                    price
+                });
+            }
+
+            persistPackages();
+            renderPackages();
+            closePackageModal();
+            UIComponents.showToast(
+                existingId ? 'Package updated successfully!' : 'Package added successfully!',
+                'success',
+                existingId ? 'Package Updated' : 'Package Created'
+            );
+        });
+    };
 
     /**
      * Initialize settings UI on page load
      */
     const initialize = () => {
+        initializePackagesState();
         loadSettings();
         setupTabListeners();
+        bindPackageEvents();
         switchTab('company');
-        console.log('[SettingsModule] ✓ Initialized');
+        console.log('[SettingsModule] Initialized');
     };
 
     /**
@@ -23,9 +213,11 @@ const SettingsModule = (() => {
      */
     const setupTabListeners = () => {
         const tabButtons = document.querySelectorAll('.settings-tab-btn');
-        tabButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const tabName = btn.getAttribute('data-tab');
+        tabButtons.forEach((button) => {
+            if (button.dataset.bound === 'true') return;
+            button.dataset.bound = 'true';
+            button.addEventListener('click', () => {
+                const tabName = button.getAttribute('data-tab');
                 switchTab(tabName);
             });
         });
@@ -37,29 +229,24 @@ const SettingsModule = (() => {
     const switchTab = (tabName) => {
         currentTab = tabName;
 
-        // Hide all panels
-        document.querySelectorAll('.settings-tab-panel').forEach(panel => {
+        document.querySelectorAll('.settings-tab-panel').forEach((panel) => {
             panel.classList.remove('active');
         });
 
-        // Remove active class from all buttons
-        document.querySelectorAll('.settings-tab-btn').forEach(btn => {
-            btn.classList.remove('active');
+        document.querySelectorAll('.settings-tab-btn').forEach((button) => {
+            button.classList.remove('active');
         });
 
-        // Show selected panel
         const panel = document.getElementById(`tab-${tabName}`);
         if (panel) {
             panel.classList.add('active');
         }
 
-        // Mark button as active
-        const activeBtn = document.querySelector(`[data-tab="${tabName}"]`);
-        if (activeBtn) {
-            activeBtn.classList.add('active');
+        const activeButton = document.querySelector(`.settings-tab-btn[data-tab="${tabName}"]`);
+        if (activeButton) {
+            activeButton.classList.add('active');
         }
 
-        // Render tab content
         if (tabName === 'company') {
             renderCompanyProfileTab();
         } else if (tabName === 'packages') {
@@ -75,8 +262,6 @@ const SettingsModule = (() => {
     const loadSettings = () => {
         const profile = SettingsManager.getCompanyProfile();
         const tax = SettingsManager.getTaxConfiguration();
-        const packages = SettingsManager.getPackages();
-        
         console.log('[SettingsModule] Loaded settings:', { profile, tax, packages });
     };
 
@@ -88,58 +273,45 @@ const SettingsModule = (() => {
         const container = document.getElementById('tab-company');
         if (!container) return;
 
-        const html = `
+        container.innerHTML = `
             <form id="company-profile-form" onsubmit="SettingsModule.saveCompanyProfile(event)">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-                    <!-- Left Column -->
                     <div>
                         <div class="form-group">
                             <label>Gym Name *</label>
-                            <input type="text" name="gymName" value="${profile.gymName}" required 
-                                   placeholder="Enter gym name" class="form-input">
+                            <input type="text" name="gymName" value="${escapeHtml(profile.gymName)}" required placeholder="Enter gym name" class="form-input">
                         </div>
-
                         <div class="form-group">
                             <label>Phone *</label>
-                            <input type="tel" name="phone" value="${profile.phone}" required 
-                                   placeholder="Enter phone number" class="form-input">
+                            <input type="tel" name="phone" value="${escapeHtml(profile.phone)}" required placeholder="Enter phone number" class="form-input">
                         </div>
-
                         <div class="form-group">
                             <label>Email *</label>
-                            <input type="email" name="email" value="${profile.email}" required 
-                                   placeholder="Enter email address" class="form-input">
+                            <input type="email" name="email" value="${escapeHtml(profile.email)}" required placeholder="Enter email address" class="form-input">
                         </div>
-
                         <div class="form-group">
                             <label>GST/SAC Number *</label>
-                            <input type="text" name="gstNumber" value="${profile.gstNumber}" required 
-                                   placeholder="e.g., GST-XXXX123456" class="form-input">
+                            <input type="text" name="gstNumber" value="${escapeHtml(profile.gstNumber)}" required placeholder="e.g., GST-XXXX123456" class="form-input">
                         </div>
                     </div>
 
-                    <!-- Right Column -->
                     <div>
                         <div class="form-group">
                             <label>Logo URL</label>
-                            <input type="url" name="logoUrl" value="${profile.logoUrl}" 
-                                   placeholder="Image URL (optional)" class="form-input">
+                            <input type="url" name="logoUrl" value="${escapeHtml(profile.logoUrl)}" placeholder="Image URL (optional)" class="form-input">
                             <small style="color: var(--on-surface-variant);">Full URL to gym logo (160x160 recommended)</small>
                         </div>
 
                         <div class="form-group">
                             <label>Logo Preview</label>
-                            <div style="width: 160px; height: 160px; background: rgba(13, 28, 47, 0.05); 
-                                        border-radius: 12px; overflow: hidden; display: flex; align-items: center; 
-                                        justify-content: center; border: 2px dashed rgba(13, 28, 47, 0.2);">
-                                <img src="${profile.logoUrl}" alt="Logo" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                            <div style="width: 160px; height: 160px; background: rgba(13, 28, 47, 0.05); border-radius: 12px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 2px dashed rgba(13, 28, 47, 0.2);">
+                                <img src="${escapeHtml(profile.logoUrl)}" alt="Logo" style="max-width: 100%; max-height: 100%; object-fit: contain;">
                             </div>
                         </div>
 
                         <div class="form-group">
                             <label>Full Address *</label>
-                            <textarea name="fullAddress" required placeholder="Enter complete address" 
-                                      class="form-input" style="grid-column: 1 / -1; resize: vertical; min-height: 100px;">${profile.fullAddress}</textarea>
+                            <textarea name="fullAddress" required placeholder="Enter complete address" class="form-input" style="grid-column: 1 / -1; resize: vertical; min-height: 100px;">${escapeHtml(profile.fullAddress)}</textarea>
                         </div>
                     </div>
                 </div>
@@ -154,8 +326,28 @@ const SettingsModule = (() => {
                 </div>
             </form>
         `;
+    };
 
-        container.innerHTML = html;
+    /**
+     * Render Packages & Courses Tab
+     */
+    const renderPackagesTab = () => {
+        const container = document.getElementById('tab-packages');
+        if (!container) return;
+
+        container.innerHTML = `
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <h3>Manage Packages & Courses</h3>
+                    <button type="button" class="btn-primary" data-package-action="add">
+                        <span class="material-icons-round">add_circle</span> Add Package
+                    </button>
+                </div>
+                <div id="packages-list-container" style="display: flex; flex-direction: column; gap: 1rem;"></div>
+            </div>
+        `;
+
+        renderPackages();
     };
 
     /**
@@ -166,31 +358,26 @@ const SettingsModule = (() => {
         const container = document.getElementById('tab-tax');
         if (!container) return;
 
-        const html = `
+        container.innerHTML = `
             <form id="tax-config-form" onsubmit="SettingsModule.saveTaxConfiguration(event)">
                 <div style="max-width: 500px;">
                     <div class="form-group">
                         <label>Tax Type Label *</label>
-                        <input type="text" name="taxLabel" value="${tax.taxLabel}" required 
-                               placeholder="e.g., GST, VAT, or Tax" class="form-input">
+                        <input type="text" name="taxLabel" value="${escapeHtml(tax.taxLabel)}" required placeholder="e.g., GST, VAT, or Tax" class="form-input">
                         <small style="color: var(--on-surface-variant);">Name of tax applied</small>
                     </div>
 
                     <div class="form-group">
                         <label>Tax Percentage * (${tax.taxPercentage}%)</label>
                         <div style="display: flex; align-items: center; gap: 1rem;">
-                            <input type="range" id="tax-slider" name="taxPercentage" 
-                                   value="${tax.taxPercentage}" min="0" max="50" 
-                                   style="flex-grow: 1;" oninput="SettingsModule.updateTaxPreview()">
-                            <div style="min-width: 80px; padding: 0.75rem 1rem; background: rgba(53, 37, 205, 0.1); 
-                                        border-radius: 8px; text-align: center; font-weight: 700; color: var(--primary);">
+                            <input type="range" id="tax-slider" name="taxPercentage" value="${tax.taxPercentage}" min="0" max="50" style="flex-grow: 1;" oninput="SettingsModule.updateTaxPreview()">
+                            <div style="min-width: 80px; padding: 0.75rem 1rem; background: rgba(53, 37, 205, 0.1); border-radius: 8px; text-align: center; font-weight: 700; color: var(--primary);">
                                 <span id="tax-display">${tax.taxPercentage}</span>%
                             </div>
                         </div>
-                        <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(13, 28, 47, 0.05); 
-                                    border-radius: 12px; border-left: 4px solid var(--primary);">
+                        <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(13, 28, 47, 0.05); border-radius: 12px; border-left: 4px solid var(--primary);">
                             <small style="color: var(--on-surface-variant);">
-                                💡 Example: If package is ₹1,000, tax will be ₹${(1000 * tax.taxPercentage / 100).toLocaleString('en-IN', { minimumFractionDigits: 0 })}
+                                Example: If package is ${formatINR(1000)}, tax will be ${formatINR(1000 * tax.taxPercentage / 100)}
                             </small>
                         </div>
                     </div>
@@ -203,156 +390,39 @@ const SettingsModule = (() => {
                 </div>
             </form>
         `;
-
-        container.innerHTML = html;
     };
 
-    /**
-     * Render Packages & Courses Tab
-     */
-    const renderPackagesTab = () => {
-        const packages = SettingsManager.getPackages();
-        const container = document.getElementById('tab-packages');
-        if (!container) return;
-
-        const packageRows = packages.map((pkg, index) => `
-            <div class="package-row" data-package-id="${pkg.id}">
-                <div class="package-info">
-                    <h4>${pkg.name}</h4>
-                    <p>${pkg.durationMonths} month${pkg.durationMonths !== 1 ? 's' : ''} • Base: ₹${pkg.basePrice.toLocaleString('en-IN')}</p>
-                </div>
-                <div class="package-actions">
-                    <button type="button" class="btn-secondary" style="padding: 8px 16px; font-size: 0.85rem;"
-                            onclick="SettingsModule.editPackage('${pkg.id}')">
-                        <span class="material-icons-round" style="font-size: 1rem;">edit</span>
-                    </button>
-                    <button type="button" class="btn-danger" style="padding: 8px 16px; font-size: 0.85rem; background: #ba1a1a; color: white;"
-                            onclick="SettingsModule.deletePackage('${pkg.id}')">
-                        <span class="material-icons-round" style="font-size: 1rem;">delete</span>
-                    </button>
-                </div>
-            </div>
-        `).join('');
-
-        const html = `
-            <div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-                    <h3>Manage Packages & Courses</h3>
-                    <button type="button" class="btn-primary" onclick="SettingsModule.openAddPackageForm()">
-                        <span class="material-icons-round">add_circle</span> Add Package
-                    </button>
-                </div>
-
-                <div id="packages-list" style="display: flex; flex-direction: column; gap: 1rem;">
-                    ${packageRows}
-                </div>
-
-                ${packages.length === 0 ? `
-                    <div style="text-align: center; padding: 3rem 1rem; color: var(--on-surface-variant);">
-                        <span class="material-icons-round" style="font-size: 3rem; color: rgba(13, 28, 47, 0.3);">package2</span>
-                        <p style="margin-top: 1rem;">No packages created yet</p>
-                        <button type="button" class="btn-primary" style="margin-top: 1rem;" onclick="SettingsModule.openAddPackageForm()">
-                            Create Your First Package
-                        </button>
-                    </div>
-                ` : ''}
-
-                <div id="package-form-container" style="display: none; margin-top: 2rem; padding: 2rem; 
-                                                        background: rgba(13, 28, 47, 0.02); border-radius: 12px;">
-                </div>
-            </div>
-        `;
-
-        container.innerHTML = html;
-    };
-
-    /**
-     * Open add package form
-     */
     const openAddPackageForm = () => {
-        const container = document.getElementById('package-form-container');
-        if (!container) return;
-
-        const html = `
-            <div>
-                <h4 style="margin-bottom: 1.5rem;">Add New Package</h4>
-                <form id="add-package-form" onsubmit="SettingsModule.savePackage(event)">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
-                        <div class="form-group">
-                            <label>Package Name *</label>
-                            <input type="text" name="name" placeholder="e.g., Annual Pass" required class="form-input">
-                        </div>
-                        <div class="form-group">
-                            <label>Duration (Months) *</label>
-                            <input type="number" name="durationMonths" placeholder="1 to 12" min="1" max="12" required class="form-input">
-                        </div>
-                        <div class="form-group">
-                            <label>Base Price (₹) *</label>
-                            <input type="number" name="basePrice" placeholder="0.00" min="0" step="0.01" required class="form-input">
-                        </div>
-                    </div>
-                    <div style="display: flex; gap: 1rem;">
-                        <button type="submit" class="btn-primary">
-                            <span class="material-icons-round">add</span> Add Package
-                        </button>
-                        <button type="button" class="btn-secondary" onclick="SettingsModule.closePackageForm()">
-                            Cancel
-                        </button>
-                    </div>
-                </form>
-            </div>
-        `;
-
-        container.innerHTML = html;
-        container.style.display = 'block';
+        openPackageModal();
     };
 
-    /**
-     * Close package form
-     */
     const closePackageForm = () => {
-        const container = document.getElementById('package-form-container');
-        if (container) {
-            container.innerHTML = '';
-            container.style.display = 'none';
-        }
+        closePackageModal();
     };
 
-    /**
-     * Save new package
-     */
-    const savePackage = (event) => {
-        event.preventDefault();
-        const formData = new FormData(event.target);
-        const packageData = {
-            name: formData.get('name'),
-            durationMonths: formData.get('durationMonths'),
-            basePrice: formData.get('basePrice')
-        };
-
-        SettingsManager.addPackage(packageData);
-        UIComponents.showToast('Package added successfully!', 'success', 'Package Created');
-        closePackageForm();
-        renderPackagesTab();
+    const savePackage = () => {
+        document.getElementById('package-form')?.requestSubmit();
     };
-
-    /**
-     * Edit package
-     */
     const editPackage = (packageId) => {
-        // Placeholder for edit functionality
-        UIComponents.showToast('Edit functionality coming soon', 'info', 'WIP');
+        openPackageModal(packageId);
     };
 
-    /**
-     * Delete package
-     */
-    const deletePackage = (packageId) => {
-        if (confirm('Are you sure you want to delete this package? This action cannot be undone.')) {
-            SettingsManager.deletePackage(packageId);
-            UIComponents.showToast('Package deleted!', 'success', 'Package Removed');
-            renderPackagesTab();
+    const deletePackage = (packageId, confirmDelete = false) => {
+        const selectedPackage = getPackageById(packageId);
+        if (!selectedPackage) {
+            UIComponents.showToast('Package not found.', 'error', 'Delete Failed');
+            return;
         }
+
+        if (confirmDelete) {
+            const confirmed = window.confirm('Are you sure you want to delete this package?');
+            if (!confirmed) return;
+        }
+
+        packages = packages.filter((pkg) => String(pkg.id) !== String(packageId));
+        persistPackages();
+        renderPackages();
+        UIComponents.showToast('Package deleted successfully!', 'success', 'Package Removed');
     };
 
     /**
@@ -389,53 +459,37 @@ const SettingsModule = (() => {
         SettingsManager.saveTaxConfiguration(taxData);
         UIComponents.showToast('Tax configuration saved!', 'success', 'Settings Updated');
         loadSettings();
+        renderTaxTab();
     };
 
-    /**
-     * Update tax preview on slider change
-     */
     const updateTaxPreview = () => {
         const slider = document.getElementById('tax-slider');
         const display = document.getElementById('tax-display');
         if (slider && display) {
-            const value = slider.value;
-            display.textContent = value;
+            display.textContent = slider.value;
         }
     };
 
-    /**
-     * Show invoice preview (with current settings)
-     */
     const showPreview = () => {
         const profile = SettingsManager.getCompanyProfile();
         const previewHTML = `
             <div style="padding: 2rem; background: white;">
-                <div style="max-width: 600px; margin: 0 auto; border: 1px solid rgba(13, 28, 47, 0.1); 
-                            border-radius: 12px; padding: 2rem;">
+                <div style="max-width: 600px; margin: 0 auto; border: 1px solid rgba(13, 28, 47, 0.1); border-radius: 12px; padding: 2rem;">
                     <div style="text-align: center; margin-bottom: 2rem;">
-                        ${profile.logoUrl ? `<img src="${profile.logoUrl}" alt="Logo" style="max-height: 80px; margin-bottom: 1rem;">` : ''}
-                        <h2 style="margin: 0; color: var(--on-surface);">${profile.gymName}</h2>
-                        <p style="margin: 0.5rem 0 0 0; color: var(--on-surface-variant); font-size: 0.9rem;">
-                            ${profile.fullAddress}
-                        </p>
-                        <p style="margin: 0.25rem 0 0 0; color: var(--on-surface-variant); font-size: 0.85rem;">
-                            📞 ${profile.phone} | 📧 ${profile.email}
-                        </p>
-                        <p style="margin: 0.25rem 0 0 0; color: var(--on-surface-variant); font-size: 0.85rem;">
-                            Tax ID: ${profile.gstNumber}
-                        </p>
+                        ${profile.logoUrl ? `<img src="${escapeHtml(profile.logoUrl)}" alt="Logo" style="max-height: 80px; margin-bottom: 1rem;">` : ''}
+                        <h2 style="margin: 0; color: var(--on-surface);">${escapeHtml(profile.gymName)}</h2>
+                        <p style="margin: 0.5rem 0 0 0; color: var(--on-surface-variant); font-size: 0.9rem;">${escapeHtml(profile.fullAddress)}</p>
+                        <p style="margin: 0.25rem 0 0 0; color: var(--on-surface-variant); font-size: 0.85rem;">Phone: ${escapeHtml(profile.phone)} | Email: ${escapeHtml(profile.email)}</p>
+                        <p style="margin: 0.25rem 0 0 0; color: var(--on-surface-variant); font-size: 0.85rem;">Tax ID: ${escapeHtml(profile.gstNumber)}</p>
                     </div>
                 </div>
-                <p style="text-align: center; margin-top: 1.5rem; color: var(--on-surface-variant); font-size: 0.85rem;">
-                    ✓ This information will appear on all invoices
-                </p>
+                <p style="text-align: center; margin-top: 1.5rem; color: var(--on-surface-variant); font-size: 0.85rem;">This information will appear on all invoices</p>
             </div>
         `;
 
         UIComponents.openModal('Invoice Preview', { content: previewHTML });
     };
 
-    // -------- PUBLIC API --------
     return {
         initialize,
         switchTab,
@@ -455,7 +509,6 @@ const SettingsModule = (() => {
     };
 })();
 
-// Initialize on DOM ready
 window.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         if (typeof SettingsModule !== 'undefined') {

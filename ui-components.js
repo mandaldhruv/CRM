@@ -156,6 +156,33 @@ const UIComponents = (() => {
      * @param {string} entity - Entity type (members, enquiries, etc)
      * @param {function} onSubmit - Callback on form submission
      */
+    const closeModalById = (modalId = 'modal-drawer') => {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+
+        modal.classList.remove('active');
+
+        if (modalId === 'modal-drawer') {
+            DOM.overlay().classList.remove('active');
+            currentForm = null;
+            currentEntity = null;
+            document.removeEventListener('keydown', handleEscapeKey);
+        }
+
+        if (modalId === 'package-modal') {
+            modal.setAttribute('aria-hidden', 'true');
+            document.getElementById('package-form')?.reset();
+            const hiddenId = document.getElementById('package-id');
+            if (hiddenId) hiddenId.value = '';
+        }
+
+        document.dispatchEvent(new CustomEvent('app:modal-closed', {
+            detail: { modalId }
+        }));
+    };
+
+    window.closeModal = closeModalById;
+
     const openModal = (title, formConfig, entity, onSubmit) => {
         currentEntity = entity;
         currentForm = { config: formConfig, onSubmit, entity };
@@ -167,21 +194,21 @@ const UIComponents = (() => {
         if (formConfig.content) {
             DOM.body().innerHTML = formConfig.content;
 
-            if (formConfig.buttons?.length) {
-                DOM.footer().innerHTML = formConfig.buttons.map((btn, idx) => `
+            const actionButtons = (formConfig.buttons || []).filter((btn) => !['close', 'cancel'].includes(String(btn.action || '').toLowerCase()));
+
+            DOM.footer().innerHTML = `
+                <button type="button" class="btn-secondary" id="modal-cancel-btn" onclick="closeModal('modal-drawer')">Cancel</button>
+                ${actionButtons.map((btn, idx) => `
                     <button type="button" class="btn-${btn.type || 'secondary'}" id="${btn.id || `modal-btn-${idx}`}">
                         ${btn.label}
                     </button>
-                `).join('');
-            } else {
-                DOM.footer().innerHTML = '';
-                DOM.footer().style.display = 'none';
-            }
+                `).join('')}
+            `;
         } else {
             // Old format with fields
             DOM.body().innerHTML = renderForm(formConfig);
             DOM.footer().innerHTML = `
-                <button type="button" class="btn-secondary" id="modal-cancel-btn" onclick="UIComponents.closeModal()">Cancel</button>
+                <button type="button" class="btn-secondary" id="modal-cancel-btn" onclick="closeModal('modal-drawer')">Cancel</button>
                 <button type="button" class="btn-primary" id="modal-submit-btn" onclick="UIComponents.submitForm()">Save Record</button>
             `;
         }
@@ -198,12 +225,7 @@ const UIComponents = (() => {
      * Closes modal drawer
      */
     const closeModal = () => {
-        DOM.drawer().classList.remove('active');
-        DOM.overlay().classList.remove('active');
-        currentForm = null;
-        currentEntity = null;
-
-        document.removeEventListener('keydown', handleEscapeKey);
+        closeModalById('modal-drawer');
     };
 
     /**
@@ -211,7 +233,7 @@ const UIComponents = (() => {
      */
     const handleEscapeKey = (e) => {
         if (e.key === 'Escape') {
-            closeModal();
+            closeModalById('modal-drawer');
         }
     };
 
@@ -219,11 +241,6 @@ const UIComponents = (() => {
      * Closes modal when clicking overlay
      */
     DOM.overlay = () => document.getElementById('modal-overlay');
-    document.addEventListener('click', (e) => {
-        if (e.target.id === 'modal-overlay' || e.target.id === 'close-member-drawer') {
-            closeModal();
-        }
-    });
 
     // -------- FORM RENDERING --------
 
@@ -313,7 +330,7 @@ const UIComponents = (() => {
             currentForm.onSubmit(data);
         }
 
-        closeModal();
+        closeModalById('modal-drawer');
     };
 
     // -------- TOAST NOTIFICATION SYSTEM --------
