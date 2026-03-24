@@ -3005,6 +3005,199 @@
         .stat-card-profit .material-icons-round {
             color: var(--card-profit-accent) !important;
         }
+
+        /* --- REPORT EXPORT DROPDOWN --- */
+        .report-btn-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .report-export-dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            min-width: 220px;
+            background: var(--bg-surface, white);
+            border: 1px solid var(--border-soft, rgba(13,28,47,0.08));
+            border-radius: 16px;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+            padding: 0.5rem;
+            z-index: 500;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-6px);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .report-export-dropdown.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .report-export-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: none;
+            background: transparent;
+            color: var(--text-primary, var(--on-surface));
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .report-export-item:hover {
+            background: var(--bg-app, var(--surface-container-low));
+        }
+
+        .report-export-item .material-icons-round {
+            font-size: 1.25rem;
+            color: var(--brand-primary, var(--primary));
+        }
+
+        /* --- DETAILS DRAWER (Stat Card Drilldown) --- */
+        .details-drawer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(13, 28, 47, 0.4);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 990;
+        }
+
+        .details-drawer-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .details-drawer {
+            position: fixed;
+            right: 0;
+            top: 0;
+            height: 100vh;
+            width: 580px;
+            max-width: 100vw;
+            background: var(--bg-surface, rgba(248, 249, 255, 0.95));
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-left: 1px solid var(--border-soft, rgba(255, 255, 255, 0.2));
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+        }
+
+        .details-drawer.active {
+            transform: translateX(0);
+        }
+
+        .details-drawer-header {
+            position: relative;
+            flex-shrink: 0;
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--border-soft, rgba(13, 28, 47, 0.08));
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .details-drawer-title {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--text-primary, var(--on-surface));
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .details-drawer-title .material-icons-round {
+            color: var(--brand-primary, var(--primary));
+        }
+
+        .details-drawer-body {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 1.5rem 2rem;
+        }
+
+        .details-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 0.9rem;
+        }
+
+        .details-table thead th {
+            text-align: left;
+            padding: 0.75rem 0.8rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary, var(--on-surface-variant));
+            border-bottom: 1px solid var(--border-soft, rgba(13, 28, 47, 0.08));
+            position: sticky;
+            top: 0;
+            background: var(--bg-surface, white);
+        }
+
+        .details-table tbody td {
+            padding: 0.75rem 0.8rem;
+            border-bottom: 1px solid var(--border-soft, rgba(13, 28, 47, 0.05));
+            color: var(--text-primary, var(--on-surface));
+        }
+
+        .details-table tbody tr:hover td {
+            background: rgba(13, 28, 47, 0.02);
+        }
+
+        .details-empty {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-secondary, var(--on-surface-variant));
+        }
+
+        .details-empty .material-icons-round {
+            font-size: 3rem;
+            opacity: 0.3;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .details-summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.85rem 1rem;
+            background: var(--bg-app, rgba(13, 28, 47, 0.03));
+            border-radius: 12px;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .details-summary-row.total {
+            background: var(--brand-primary, var(--primary));
+            color: white;
+            border-radius: 12px;
+            font-weight: 800;
+            margin-top: 0.5rem;
+        }
     </style>
 </head>
 
@@ -3076,7 +3269,17 @@
                     <h1 class="display-text">Operational Pulse</h1>
                     <p style="color: var(--on-surface-variant)">Real-time health telemetry: Downtown Branch</p>
                 </div>
-                <button class="btn-primary"><span class="material-icons-round">file_download</span> Report</button>
+                <div class="report-btn-wrapper">
+                    <button class="btn-primary" id="dashboard-report-btn"><span class="material-icons-round">file_download</span> Report</button>
+                    <div class="report-export-dropdown" id="report-export-dropdown">
+                        <button type="button" class="report-export-item" data-export="csv">
+                            <span class="material-icons-round">table_chart</span> Download as CSV
+                        </button>
+                        <button type="button" class="report-export-item" data-export="pdf">
+                            <span class="material-icons-round">picture_as_pdf</span> Download as PDF
+                        </button>
+                    </div>
+                </div>
             </div>
             
             <!-- Dashboard Metrics Container -->
@@ -3637,6 +3840,19 @@
                 </form>
             </div>
         </div>
+    </div>
+
+    <!-- DETAILS DRAWER (Stat Card Drilldown) -->
+    <div id="details-drawer-overlay" class="details-drawer-overlay"></div>
+    <div id="details-drawer" class="details-drawer">
+        <div class="details-drawer-header">
+            <div class="details-drawer-title" id="details-drawer-title">
+                <span class="material-icons-round">info</span>
+                Details
+            </div>
+            <button type="button" class="premium-close-btn" id="details-drawer-close" aria-label="Close">&times;</button>
+        </div>
+        <div class="details-drawer-body" id="details-drawer-body"></div>
     </div>
 
     <!-- TOAST NOTIFICATION CONTAINER -->
@@ -4346,8 +4562,6 @@
             saveAttendanceRecords(attendanceRecords);
             renderHrPayrollTable();
             renderReportsHub();
-            renderReportsHub();
-            renderReportsHub();
 
             if (typeof UIComponents !== 'undefined') {
                 UIComponents.showToast(`Attendance marked ${status} for today.`, 'success', 'Attendance Updated');
@@ -4852,6 +5066,248 @@
             console.log('%c\n⚡ Try these commands in console:', 'color: #ed6c02; font-weight: bold');
             console.log('   StateManager.getStats()                    // View all records\n   StateManager.Members.getAll()            // Get all members\n   MemberModule.renderMembersTable()        // Render members list\n   UIComponents.showToast("Hello!", "success", "Test")  // Test toast\n   StateManager.clearAll()                   // Reset database');
             renderAttendanceActivity();
+
+            // ====== PHASE 2: REPORT EXPORT DROPDOWN ======
+            const reportBtn = document.getElementById('dashboard-report-btn');
+            const reportDropdown = document.getElementById('report-export-dropdown');
+
+            if (reportBtn && reportDropdown) {
+                reportBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    reportDropdown.classList.toggle('active');
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.report-btn-wrapper')) {
+                        reportDropdown.classList.remove('active');
+                    }
+                });
+
+                reportDropdown.addEventListener('click', async (e) => {
+                    const item = e.target.closest('[data-export]');
+                    if (!item) return;
+
+                    const exportType = item.dataset.export;
+                    reportDropdown.classList.remove('active');
+
+                    if (exportType === 'csv') {
+                        try {
+                            const members = getMembersReportData();
+                            const receipts = getCollectionFromStorage(['receipts', 'ka_receipts'], () => StateManager.Receipts.getAll());
+                            const expenses = getCollectionFromStorage(['expenses', 'ka_expenses'], () => StateManager.Expenses.getAll());
+
+                            const dashboardData = [
+                                ...members.map(m => ({
+                                    Type: 'Member',
+                                    Name: [m.firstName, m.lastName].filter(Boolean).join(' ') || m.name || '',
+                                    Package: m.package || m.membershipPlan || '',
+                                    Status: m.status || '',
+                                    StartDate: m.startDate || '',
+                                    EndDate: m.endDate || '',
+                                    Fees: m.fees || '',
+                                    Balance: m.balance || 0,
+                                    Contact: m.contact || m.phone || ''
+                                })),
+                                ...receipts.map(r => ({
+                                    Type: 'Receipt',
+                                    Name: r.memberName || r.name || '',
+                                    Package: r.package || '',
+                                    Status: r.status || 'issued',
+                                    StartDate: '',
+                                    EndDate: '',
+                                    Fees: r.amount || 0,
+                                    Balance: '',
+                                    Contact: r.paymentMode || ''
+                                })),
+                                ...expenses.map(ex => ({
+                                    Type: 'Expense',
+                                    Name: ex.description || ex.category || '',
+                                    Package: ex.category || '',
+                                    Status: ex.status || '',
+                                    StartDate: ex.date || ex.createdAt || '',
+                                    EndDate: '',
+                                    Fees: ex.amount || 0,
+                                    Balance: '',
+                                    Contact: ex.vendor || ''
+                                }))
+                            ];
+
+                            const dateStamp = getTodayIsoDate();
+                            const didExport = exportToCSV(dashboardData, `dashboard-report-${dateStamp}.csv`);
+                            if (didExport) {
+                                UIComponents.showToast('Dashboard CSV downloaded.', 'success', 'Report Ready');
+                            }
+                        } catch (err) {
+                            console.error('[Report] CSV export failed', err);
+                            UIComponents.showToast('CSV export failed.', 'error', 'Export Error');
+                        }
+                    }
+
+                    if (exportType === 'pdf') {
+                        const btn = item;
+                        const originalLabel = btn.innerHTML;
+                        try {
+                            btn.disabled = true;
+                            btn.innerHTML = '<span class="material-icons-round">hourglass_top</span> Generating...';
+
+                            if (typeof html2pdf === 'undefined') {
+                                UIComponents.showToast('PDF library not loaded.', 'error', 'PDF Error');
+                                return;
+                            }
+
+                            const dashboardSection = document.getElementById('dashboard-section');
+                            if (!dashboardSection) return;
+
+                            await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
+
+                            const options = {
+                                margin: [10, 10, 12, 10],
+                                filename: `dashboard-report-${getTodayIsoDate()}.pdf`,
+                                image: { type: 'jpeg', quality: 0.95 },
+                                html2canvas: { scale: 1.5, useCORS: true, backgroundColor: '#ffffff', scrollY: 0 },
+                                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+                                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+                            };
+
+                            await html2pdf().set(options).from(dashboardSection).save();
+                            UIComponents.showToast('Dashboard PDF downloaded.', 'success', 'PDF Ready');
+                        } catch (err) {
+                            console.error('[Report] PDF export failed', err);
+                            UIComponents.showToast('PDF generation failed.', 'error', 'PDF Error');
+                        } finally {
+                            btn.disabled = false;
+                            btn.innerHTML = originalLabel;
+                        }
+                    }
+                });
+            }
+
+            // ====== PHASE 3: STAT CARD CLICK → DETAILS DRAWER ======
+            const detailsDrawer = document.getElementById('details-drawer');
+            const detailsOverlay = document.getElementById('details-drawer-overlay');
+            const detailsTitle = document.getElementById('details-drawer-title');
+            const detailsBody = document.getElementById('details-drawer-body');
+            const detailsClose = document.getElementById('details-drawer-close');
+
+            function openDetailsDrawer(title, icon, contentHTML) {
+                if (!detailsDrawer || !detailsOverlay) return;
+                detailsTitle.innerHTML = `<span class="material-icons-round">${icon}</span> ${title}`;
+                detailsBody.innerHTML = contentHTML;
+                detailsDrawer.classList.add('active');
+                detailsOverlay.classList.add('active');
+            }
+
+            function closeDetailsDrawer() {
+                detailsDrawer?.classList.remove('active');
+                detailsOverlay?.classList.remove('active');
+            }
+
+            detailsClose?.addEventListener('click', closeDetailsDrawer);
+            detailsOverlay?.addEventListener('click', closeDetailsDrawer);
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && detailsDrawer?.classList.contains('active')) {
+                    closeDetailsDrawer();
+                }
+            });
+
+            // Delegated click handler for stat cards
+            document.body.addEventListener('click', (e) => {
+                const statCard = e.target.closest('[data-stat-type]');
+                if (!statCard) return;
+
+                const type = statCard.dataset.statType;
+
+                switch (type) {
+                    case 'collection': {
+                        const receipts = getCollectionFromStorage(['receipts', 'ka_receipts'], () => StateManager.Receipts.getAll()) || [];
+                        const today = getTodayIsoDate();
+                        const todaysReceipts = receipts.filter(r => {
+                            const d = r.receiptDate || r.createdAt?.split('T')[0] || '';
+                            return d === today;
+                        });
+
+                        if (todaysReceipts.length === 0) {
+                            openDetailsDrawer("Today's Collection", 'payments',
+                                '<div class="details-empty"><span class="material-icons-round">receipt_long</span><p>No receipts recorded today yet.</p></div>');
+                        } else {
+                            let rows = todaysReceipts.map(r => `<tr>
+                                <td>${r.memberName || 'N/A'}</td>
+                                <td style="font-weight:700">${formatINR(r.amount || 0)}</td>
+                                <td>${r.paymentMode || r.mode || 'N/A'}</td>
+                                <td>${r.note || r.package || ''}</td>
+                            </tr>`).join('');
+                            const total = todaysReceipts.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+                            openDetailsDrawer("Today's Collection", 'payments',
+                                `<table class="details-table"><thead><tr><th>Member</th><th>Amount</th><th>Mode</th><th>Note</th></tr></thead><tbody>${rows}</tbody></table>
+                                <div class="details-summary-row total" style="margin-top:1rem;"><span>Total</span><span>${formatINR(total)}</span></div>`);
+                        }
+                        break;
+                    }
+                    case 'active': {
+                        const members = getMembersReportData().filter(m => String(m.status || '').toLowerCase() === 'active');
+                        if (members.length === 0) {
+                            openDetailsDrawer('Active Subscriptions', 'people',
+                                '<div class="details-empty"><span class="material-icons-round">people_outline</span><p>No active members found.</p></div>');
+                        } else {
+                            let rows = members.map(m => {
+                                const name = [m.firstName, m.lastName].filter(Boolean).join(' ') || m.name || '';
+                                return `<tr><td>${name}</td><td>${m.package || m.membershipPlan || 'N/A'}</td><td>${m.startDate ? new Date(m.startDate).toLocaleDateString() : 'N/A'}</td><td>${m.endDate ? new Date(m.endDate).toLocaleDateString() : 'N/A'}</td></tr>`;
+                            }).join('');
+                            openDetailsDrawer('Active Subscriptions', 'people',
+                                `<p style="margin-bottom:1rem;color:var(--text-secondary)">${members.length} active member${members.length !== 1 ? 's' : ''}</p>
+                                <table class="details-table"><thead><tr><th>Name</th><th>Package</th><th>Start</th><th>End</th></tr></thead><tbody>${rows}</tbody></table>`);
+                        }
+                        break;
+                    }
+                    case 'expiring': {
+                        const allMembers = getMembersReportData();
+                        const now = new Date();
+                        const futureDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+                        const expiring = allMembers.filter(m => {
+                            if (!m.endDate || String(m.status || '').toLowerCase() !== 'active') return false;
+                            const end = new Date(m.endDate);
+                            return end >= now && end <= futureDate;
+                        });
+
+                        if (expiring.length === 0) {
+                            openDetailsDrawer('Expiring Soon', 'schedule',
+                                '<div class="details-empty"><span class="material-icons-round">event_available</span><p>No memberships expiring in the next 7 days.</p></div>');
+                        } else {
+                            let rows = expiring.map(m => {
+                                const name = [m.firstName, m.lastName].filter(Boolean).join(' ') || m.name || '';
+                                const end = new Date(m.endDate);
+                                const daysLeft = Math.max(0, Math.ceil((end - now) / (1000 * 60 * 60 * 24)));
+                                const urgencyColor = daysLeft <= 2 ? 'var(--error, #c62828)' : daysLeft <= 4 ? 'var(--warning, #ed6c02)' : 'var(--text-primary)';
+                                return `<tr><td>${name}</td><td>${m.package || 'N/A'}</td><td>${end.toLocaleDateString()}</td><td style="font-weight:700;color:${urgencyColor}">${daysLeft} day${daysLeft !== 1 ? 's' : ''}</td></tr>`;
+                            }).join('');
+                            openDetailsDrawer('Expiring Soon', 'schedule',
+                                `<p style="margin-bottom:1rem;color:var(--text-secondary)">${expiring.length} membership${expiring.length !== 1 ? 's' : ''} expiring within 7 days</p>
+                                <table class="details-table"><thead><tr><th>Name</th><th>Package</th><th>End Date</th><th>Days Left</th></tr></thead><tbody>${rows}</tbody></table>`);
+                        }
+                        break;
+                    }
+                    case 'profit': {
+                        const totalIncome = DashboardAnalytics.getTotalIncome();
+                        const totalExpenses = DashboardAnalytics.getTotalExpenses();
+                        const netProfit = totalIncome - totalExpenses;
+                        const categories = DashboardAnalytics.getExpensesByCategory();
+                        let catRows = '';
+                        Object.entries(categories).forEach(([cat, amt]) => {
+                            catRows += `<tr><td>${cat}</td><td style="font-weight:700">${formatINR(amt)}</td></tr>`;
+                        });
+
+                        openDetailsDrawer('Net Profit Breakdown', 'account_balance',
+                            `<div class="details-summary-row"><span>Total Income (All Receipts)</span><span style="font-weight:700;color:var(--success, #2e7d32)">${formatINR(totalIncome)}</span></div>
+                            <div class="details-summary-row"><span>Total Expenses</span><span style="font-weight:700;color:var(--error, #c62828)">${formatINR(totalExpenses)}</span></div>
+                            <div class="details-summary-row total"><span>Net Profit</span><span>${formatINR(netProfit)}</span></div>
+                            ${catRows ? `<h4 style="margin:1.5rem 0 0.75rem;font-weight:700">Expense Breakdown (This Month)</h4>
+                            <table class="details-table"><thead><tr><th>Category</th><th>Amount</th></tr></thead><tbody>${catRows}</tbody></table>` : '<p style="margin-top:1.5rem;color:var(--text-secondary)">No expenses recorded this month.</p>'}`);
+                        break;
+                    }
+                }
+            });
+
         });
     </script>
 

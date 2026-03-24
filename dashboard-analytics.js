@@ -143,7 +143,7 @@ const DashboardAnalytics = (() => {
         const netProfit = calculateNetProfit();
 
         const containerHTML = `
-            <div class="card stat-card stat-card-collection">
+            <div class="card stat-card stat-card-collection" data-stat-type="collection" style="cursor:pointer;" title="Click to view today's receipts">
                 <div class="metric-label">Today's Collection</div>
                 <div class="metric-value">${formatINR(todaysCollection)}</div>
                 <div class="metric-trend">
@@ -151,7 +151,7 @@ const DashboardAnalytics = (() => {
                 </div>
             </div>
 
-            <div class="card stat-card stat-card-active">
+            <div class="card stat-card stat-card-active" data-stat-type="active" style="cursor:pointer;" title="Click to view active members">
                 <div class="metric-label">Active Subscriptions</div>
                 <div class="metric-value">${activeMembers}</div>
                 <div class="metric-trend">
@@ -159,7 +159,7 @@ const DashboardAnalytics = (() => {
                 </div>
             </div>
 
-            <div class="card stat-card stat-card-expiring">
+            <div class="card stat-card stat-card-expiring" data-stat-type="expiring" style="cursor:pointer;" title="Click to view expiring memberships">
                 <div class="metric-label">Expiring Soon</div>
                 <div class="metric-value">${expiringCount}</div>
                 <div class="metric-trend">
@@ -167,7 +167,7 @@ const DashboardAnalytics = (() => {
                 </div>
             </div>
 
-            <div class="card stat-card stat-card-profit">
+            <div class="card stat-card stat-card-profit" data-stat-type="profit" style="cursor:pointer;" title="Click to view income vs expenses">
                 <div class="metric-label">Net Profit</div>
                 <div class="metric-value" style="color: var(--success);">${formatINR(netProfit)}</div>
                 <div class="metric-trend">
