@@ -412,6 +412,16 @@ const MemberModule = (() => {
         const drawer = document.getElementById('modal-drawer');
         if (!drawer) return;
 
+        document.addEventListener('app:modal-closed', (event) => {
+            if (event.detail?.modalId !== 'modal-drawer') {
+                return;
+            }
+
+            currentEditMember = null;
+            memberSubmitInFlight = false;
+            drawer.classList.remove('member-modal-mode');
+        });
+
         const observer = new MutationObserver(() => {
             if (!drawer.classList.contains('active')) {
                 resetMemberModalState();
@@ -526,7 +536,7 @@ const MemberModule = (() => {
         });
 
         const modal = document.querySelector('.modal-drawer');
-        modal?.querySelector('button:last-child')?.addEventListener('click', () => {
+        modal?.querySelector('#modal-footer button:last-child')?.addEventListener('click', () => {
             openMemberWhatsApp(member, 'welcome');
             closeModal('modal-drawer');
         }, { once: true });
@@ -835,7 +845,7 @@ const MemberModule = (() => {
         });
 
         const modal = document.querySelector('.modal-drawer');
-        const printBtn = modal?.querySelector('button:last-child');
+        const printBtn = modal?.querySelector('#modal-footer button:last-child');
 
         if (printBtn) {
             printBtn.onclick = async () => {

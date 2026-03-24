@@ -156,32 +156,111 @@ const UIComponents = (() => {
      * @param {string} entity - Entity type (members, enquiries, etc)
      * @param {function} onSubmit - Callback on form submission
      */
-    const closeModalById = (modalId = 'modal-drawer') => {
-        const modal = document.getElementById(modalId);
+    const resolveModalElement = (modalRef = 'modal-drawer') => {
+        if (typeof modalRef === 'string') {
+            return document.getElementById(modalRef);
+        }
+
+        if (!(modalRef instanceof Element)) {
+            return null;
+        }
+
+        const modalRootId = modalRef.dataset?.modalRoot;
+        if (modalRootId) {
+            return document.getElementById(modalRootId);
+        }
+
+        return modalRef;
+    };
+
+    const closeModalById = (modalRef = 'modal-drawer') => {
+        const modal = resolveModalElement(modalRef);
         if (!modal) return;
+
+        modal.querySelectorAll('video').forEach((video) => {
+            const stream = video.srcObject;
+            if (stream && typeof stream.getTracks === 'function') {
+                stream.getTracks().forEach((track) => track.stop());
+            }
+            video.srcObject = null;
+        });
+
+        modal.querySelectorAll('form').forEach((form) => {
+            form.reset();
+        });
 
         modal.classList.remove('active');
 
-        if (modalId === 'modal-drawer') {
-            DOM.overlay().classList.remove('active');
+        if (modal.id === 'modal-drawer') {
+            DOM.overlay()?.classList.remove('active');
             currentForm = null;
             currentEntity = null;
-            document.removeEventListener('keydown', handleEscapeKey);
         }
 
-        if (modalId === 'package-modal') {
+        if (modal.id === 'package-modal') {
             modal.setAttribute('aria-hidden', 'true');
-            document.getElementById('package-form')?.reset();
             const hiddenId = document.getElementById('package-id');
             if (hiddenId) hiddenId.value = '';
         }
 
+        if (modal.id === 'payroll-modal-overlay') {
+            modal.setAttribute('aria-hidden', 'true');
+        }
+
         document.dispatchEvent(new CustomEvent('app:modal-closed', {
-            detail: { modalId }
+            detail: { modalId: modal.id || '' }
         }));
     };
 
     window.closeModal = closeModalById;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.body.addEventListener('click', (event) => {
+            const closeTrigger = event.target.closest('.premium-close-btn') || event.target.closest('.btn-cancel');
+            if (closeTrigger) {
+                event.preventDefault();
+                const container = closeTrigger.closest('.modal-container, .drawer-container');
+                if (container) {
+                    closeModalById(container);
+                }
+                return;
+            }
+
+            const submitTrigger = event.target.closest('[data-modal-submit]');
+            if (submitTrigger) {
+                event.preventDefault();
+                const formId = submitTrigger.dataset.modalSubmit;
+                const form = formId ? document.getElementById(formId) : document.getElementById('modal-form');
+
+                if (form && typeof form.requestSubmit === 'function') {
+                    form.requestSubmit();
+                } else {
+                    submitForm();
+                }
+                return;
+            }
+
+            const overlay = event.target.closest('.modal-overlay, .package-modal, .payroll-modal-overlay');
+            if (!overlay || overlay !== event.target) {
+                return;
+            }
+
+            const modalTarget = overlay.dataset.closeTarget;
+            if (modalTarget) {
+                closeModalById(modalTarget);
+            }
+        });
+
+        document.body.addEventListener('submit', (event) => {
+            const modalForm = event.target.closest('#modal-form');
+            if (!modalForm) {
+                return;
+            }
+
+            event.preventDefault();
+            submitForm();
+        });
+    }, { once: true });
 
     const openModal = (title, formConfig, entity, onSubmit) => {
         currentEntity = entity;
@@ -197,9 +276,9 @@ const UIComponents = (() => {
             const actionButtons = (formConfig.buttons || []).filter((btn) => !['close', 'cancel'].includes(String(btn.action || '').toLowerCase()));
 
             DOM.footer().innerHTML = `
-                <button type="button" class="btn-secondary" id="modal-cancel-btn" onclick="closeModal('modal-drawer')">Cancel</button>
+                <button type="button" class="btn-secondary btn-cancel" id="modal-cancel-btn">Cancel</button>
                 ${actionButtons.map((btn, idx) => `
-                    <button type="button" class="btn-${btn.type || 'secondary'}" id="${btn.id || `modal-btn-${idx}`}">
+                    <button type="button" class="btn-${btn.type || 'secondary'}" id="${btn.id || `modal-btn-${idx}`}" ${btn.form ? `data-modal-submit="${btn.form}"` : ''}>
                         ${btn.label}
                     </button>
                 `).join('')}
@@ -208,17 +287,14 @@ const UIComponents = (() => {
             // Old format with fields
             DOM.body().innerHTML = renderForm(formConfig);
             DOM.footer().innerHTML = `
-                <button type="button" class="btn-secondary" id="modal-cancel-btn" onclick="closeModal('modal-drawer')">Cancel</button>
-                <button type="button" class="btn-primary" id="modal-submit-btn" onclick="UIComponents.submitForm()">Save Record</button>
+                <button type="button" class="btn-secondary btn-cancel" id="modal-cancel-btn">Cancel</button>
+                <button type="button" class="btn-primary" id="modal-submit-btn" data-modal-submit="modal-form">Save Record</button>
             `;
         }
 
         DOM.drawer().classList.add('active');
         DOM.overlay().classList.add('active');
         ValidationUtils.attachLiveValidation(DOM.body());
-
-        // Allow escape key to close
-        document.addEventListener('keydown', handleEscapeKey);
     };
 
     /**
@@ -227,20 +303,6 @@ const UIComponents = (() => {
     const closeModal = () => {
         closeModalById('modal-drawer');
     };
-
-    /**
-     * Handles escape key press
-     */
-    const handleEscapeKey = (e) => {
-        if (e.key === 'Escape') {
-            closeModalById('modal-drawer');
-        }
-    };
-
-    /**
-     * Closes modal when clicking overlay
-     */
-    DOM.overlay = () => document.getElementById('modal-overlay');
 
     // -------- FORM RENDERING --------
 

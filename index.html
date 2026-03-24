@@ -422,6 +422,24 @@
             color: var(--on-surface);
         }
 
+        .premium-close-btn {
+            position: absolute;
+            top: 16px;
+            right: 24px;
+            background: transparent;
+            border: none;
+            font-size: 28px;
+            line-height: 1;
+            color: var(--text-secondary, #6B7280);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .premium-close-btn:hover {
+            color: #ba1a1a;
+            transform: scale(1.1);
+        }
+
         .modal-content,
         .drawer-body {
             flex: 1;
@@ -3510,24 +3528,26 @@
     <div id="scanner-toast-banner" class="scanner-toast-banner" aria-live="assertive"></div>
 
     <!-- MODAL/DRAWER SYSTEM -->
-    <div id="modal-overlay" class="modal-overlay"></div>
-    <div id="modal-drawer" class="modal-drawer">
+    <div id="modal-overlay" class="modal-overlay" data-close-target="modal-drawer"></div>
+    <div id="modal-drawer" class="modal-drawer drawer-container" data-modal-root="modal-drawer">
         <div class="modal-header">
             <h2 class="modal-title" id="modal-title">Add New Record</h2>
+            <button type="button" class="premium-close-btn" aria-label="Close">&times;</button>
         </div>
         <div class="modal-content drawer-body" id="modal-body">
             <!-- Form content will be injected here -->
         </div>
         <div class="modal-footer drawer-footer" id="modal-footer">
-            <button type="button" class="btn-secondary" id="modal-cancel-btn" onclick="closeModal('modal-drawer')">Cancel</button>
-            <button type="button" class="btn-primary" id="modal-submit-btn" onclick="UIComponents.submitForm()">Save Record</button>
+            <button type="button" class="btn-secondary btn-cancel" id="modal-cancel-btn">Cancel</button>
+            <button type="button" class="btn-primary" id="modal-submit-btn" data-modal-submit="modal-form">Save Record</button>
         </div>
     </div>
 
-    <div id="package-modal" class="package-modal" aria-hidden="true">
-        <div class="package-modal-card">
+    <div id="package-modal" class="package-modal" aria-hidden="true" data-close-target="package-modal">
+        <div class="package-modal-card modal-container" data-modal-root="package-modal">
             <div class="package-modal-header">
                 <h3 class="package-modal-title" id="package-modal-title">Add Package</h3>
+                <button type="button" class="premium-close-btn" aria-label="Close">&times;</button>
             </div>
             <div class="package-modal-body">
                 <form id="package-form" novalidate>
@@ -3550,7 +3570,7 @@
                 </form>
             </div>
             <div class="package-modal-footer">
-                <button type="button" id="cancel-package-btn" class="btn-secondary" onclick="closeModal('package-modal')">Cancel</button>
+                <button type="button" id="cancel-package-btn" class="btn-secondary btn-cancel">Cancel</button>
                 <button type="submit" id="save-package-btn" class="btn-primary" form="package-form">Save Package</button>
             </div>
         </div>
@@ -3573,16 +3593,14 @@
         </div>
     </div>
 
-    <div id="payroll-modal-overlay" class="payroll-modal-overlay" aria-hidden="true">
-        <div class="payroll-modal" role="dialog" aria-modal="true" aria-labelledby="payroll-modal-title">
+    <div id="payroll-modal-overlay" class="payroll-modal-overlay" aria-hidden="true" data-close-target="payroll-modal-overlay">
+        <div class="payroll-modal modal-container" data-modal-root="payroll-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="payroll-modal-title">
             <div class="payroll-modal-header">
                 <div>
                     <h2 class="modal-title" id="payroll-modal-title">Salary Settlement Calculator</h2>
                     <p id="payroll-modal-staff-name" class="section-subtitle">Preparing payroll record</p>
                 </div>
-                <button class="modal-close" type="button" onclick="closePayrollModal()">
-                    <span class="material-icons-round">close</span>
-                </button>
+                <button type="button" class="premium-close-btn" aria-label="Close">&times;</button>
             </div>
             <div class="payroll-modal-body">
                 <form id="payroll-form">
@@ -3613,7 +3631,7 @@
                         <div id="payroll-net-pay" class="payroll-summary-value">₹0.00</div>
                     </div>
                     <div class="payroll-modal-actions">
-                        <button type="button" class="btn-secondary" onclick="closePayrollModal()">Cancel</button>
+                        <button type="button" class="btn-secondary btn-cancel">Cancel</button>
                         <button type="submit" class="btn-primary">Save Payroll</button>
                     </div>
                 </form>
@@ -4388,18 +4406,17 @@
         }
 
         function closePayrollModal() {
-            const modalOverlay = document.getElementById('payroll-modal-overlay');
-            const form = document.getElementById('payroll-form');
-            if (!modalOverlay || !form) {
+            closeModal('payroll-modal-overlay');
+        }
+
+        document.addEventListener('app:modal-closed', (event) => {
+            if (event.detail?.modalId !== 'payroll-modal-overlay') {
                 return;
             }
 
-            modalOverlay.classList.remove('active');
-            modalOverlay.setAttribute('aria-hidden', 'true');
-            form.reset();
             document.getElementById('payroll-net-pay').textContent = formatCurrency(0);
             activePayrollStaff = null;
-        }
+        });
 
         function getAttendanceStatusMarkup(status) {
             if (status === 'present') {

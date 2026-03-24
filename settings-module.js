@@ -108,9 +108,7 @@ const SettingsModule = (() => {
         eventsBound = true;
 
         const packagesContainer = document.getElementById('tab-packages');
-        const packageModal = document.getElementById('package-modal');
         const packageForm = document.getElementById('package-form');
-        const cancelButton = document.getElementById('cancel-package-btn');
 
         packagesContainer?.addEventListener('click', (event) => {
             const addButton = event.target.closest('[data-package-action="add"]');
@@ -133,10 +131,6 @@ const SettingsModule = (() => {
                 if (!packageId) return;
                 deletePackage(packageId, true);
             }
-        });
-
-        cancelButton?.addEventListener('click', () => {
-            closePackageModal();
         });
 
         packageForm?.addEventListener('submit', (event) => {
