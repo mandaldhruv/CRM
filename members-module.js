@@ -24,6 +24,10 @@ const MemberModule = (() => {
     let drawerControlsBound = false;
     let currentEditMember = null;
     let memberSubmitInFlight = false;
+    let pendingMemberFormData = null;
+    let pendingInvoiceMemberData = null;
+    let pendingInvoiceEditTarget = null;
+    let pendingInvoiceNeedsPersistence = false;
 
     /**
      * MEMBER FORM CONFIGURATION
@@ -39,7 +43,7 @@ const MemberModule = (() => {
                     { name: 'firstName', label: 'First Name *', type: 'text', required: true, placeholder: 'John' },
                     { name: 'lastName', label: 'Last Name *', type: 'text', required: true, placeholder: 'Doe' },
                     { name: 'contact', label: 'Contact Number *', type: 'tel', required: true, placeholder: '+91 98765 43210' },
-                    { name: 'email', label: 'Email *', type: 'email', required: true, placeholder: 'john@example.com' },
+                    { name: 'email', label: 'Email', type: 'email', required: false, placeholder: 'john@example.com' },
                     { name: 'dob', label: 'Date of Birth *', type: 'date', required: true },
                     { name: 'age', label: 'Age', type: 'number', readonly: true, placeholder: 'Auto-calculated' },
                     { name: 'gender', label: 'Gender *', type: 'select', required: true, options: [
@@ -48,7 +52,7 @@ const MemberModule = (() => {
                         { value: 'female', label: 'Female' },
                         { value: 'other', label: 'Other' }
                     ]},
-                    { name: 'bloodGroup', label: 'Blood Group *', type: 'select', required: true, options: [
+                    { name: 'bloodGroup', label: 'Blood Group', type: 'select', required: false, options: [
                         { value: '', label: 'Select Blood Group' },
                         { value: 'O+', label: 'O+' },
                         { value: 'O-', label: 'O-' },
@@ -59,7 +63,7 @@ const MemberModule = (() => {
                         { value: 'AB+', label: 'AB+' },
                         { value: 'AB-', label: 'AB-' }
                     ]},
-                    { name: 'address', label: 'Address *', type: 'textarea', required: true, placeholder: '123 Main St, City, State 12345' },
+                    { name: 'address', label: 'Address', type: 'textarea', required: false, placeholder: '123 Main St, City, State 12345' },
                     { name: 'healthDetails', label: 'Health Details / Medical Conditions', type: 'textarea', placeholder: 'Any allergies, injuries, or medical conditions...' }
                 ]
             },
@@ -83,7 +87,7 @@ const MemberModule = (() => {
                     { name: 'startDate', label: 'Start Date *', type: 'date', required: true },
                     { name: 'endDate', label: 'End Date', type: 'date', readonly: true, placeholder: 'Auto-calculated' },
                     { name: 'fees', label: 'Membership Fees *', type: 'number', required: true, placeholder: '0.00' },
-                    { name: 'discount', label: 'Discount (%)', type: 'number', placeholder: '0', min: 0, max: 100 },
+                    { name: 'discount', label: 'Discount', type: 'number', placeholder: '0', min: 0, max: 100 },
                     { name: 'paidAmount', label: 'Amount Paid *', type: 'number', required: true, placeholder: '0.00' },
                     { name: 'balance', label: 'Balance', type: 'number', readonly: true, placeholder: '0.00' },
                     { name: 'paymentMode', label: 'Payment Mode *', type: 'select', required: true, options: [
@@ -99,37 +103,29 @@ const MemberModule = (() => {
         ]
     };
 
-    /**
-     * PACKAGE DURATION CONFIGURATION
-     * Defines duration in days for each package
-     */
-    const packageDurations = {
-        'basic-3m': 90,
-        'basic-6m': 180,
-        'basic-12m': 365,
-        'premium-3m': 90,
-        'premium-6m': 180,
-        'premium-12m': 365,
-        'elite-3m': 90,
-        'elite-6m': 180,
-        'elite-12m': 365,
-        'pt-session': 30
+    const DEFAULT_PACKAGE_CATALOG = [
+        { id: 'basic-3m', name: 'Basic 3 Months', durationMonths: 3, price: 3000 },
+        { id: 'premium-6m', name: 'Premium 6 Months', durationMonths: 6, price: 5400 }
+    ];
+
+    const getAvailablePackages = () => {
+        const packageRecords = typeof StateManager !== 'undefined' && StateManager.Packages
+            ? StateManager.Packages.getAll()
+            : JSON.parse(localStorage.getItem('ka_packages') || '[]');
+        const normalized = (Array.isArray(packageRecords) ? packageRecords : [])
+            .map((pkg) => ({
+                id: String(pkg.id || '').trim(),
+                name: String(pkg.name || '').trim(),
+                durationMonths: Number(pkg.durationMonths || 0),
+                price: Number(pkg.price ?? pkg.basePrice ?? 0)
+            }))
+            .filter((pkg) => pkg.id && pkg.name);
+
+        return normalized.length > 0 ? normalized : DEFAULT_PACKAGE_CATALOG;
     };
 
-    /**
-     * PACKAGE PRICING CONFIGURATION
-     */
-    const packagePrices = {
-        'basic-3m': 3000,
-        'basic-6m': 5400,
-        'basic-12m': 9600,
-        'premium-3m': 5000,
-        'premium-6m': 9000,
-        'premium-12m': 16000,
-        'elite-3m': 8000,
-        'elite-6m': 14400,
-        'elite-12m': 25600,
-        'pt-session': 500
+    const getPackageConfigById = (packageId) => {
+        return getAvailablePackages().find((pkg) => String(pkg.id) === String(packageId)) || null;
     };
 
     /**
@@ -152,18 +148,32 @@ const MemberModule = (() => {
      */
     const calculateEndDate = (startDate, packageId) => {
         if (!startDate || !packageId) return null;
-        const durationDays = packageDurations[packageId] || 30;
+        const selectedPackage = getPackageConfigById(packageId);
+        const durationDays = Math.max((Number(selectedPackage?.durationMonths) || 1) * 30, 30);
         const start = new Date(startDate);
         const end = new Date(start.getTime() + durationDays * 24 * 60 * 60 * 1000);
         return end.toISOString().split('T')[0];
+    };
+
+    const calculateDiscountAmount = (fees, discountValue, discountType = 'amount') => {
+        const normalizedFees = Number(fees) || 0;
+        const normalizedDiscount = Number(discountValue) || 0;
+        let actualDiscount = 0;
+
+        if (discountType === 'percent') {
+            actualDiscount = (normalizedFees * normalizedDiscount) / 100;
+        } else {
+            actualDiscount = normalizedDiscount;
+        }
+
+        return Math.min(Math.max(actualDiscount, 0), normalizedFees);
     };
 
     /**
      * Calculate balance (fees after discount - paid amount)
      */
     const calculateBalance = (fees, discount, paid) => {
-        const discountAmount = (fees * (discount || 0)) / 100;
-        const finalAmount = fees - discountAmount;
+        const finalAmount = (Number(fees) || 0) - (Number(discount) || 0);
         const balance = finalAmount - (paid || 0);
         return Math.max(0, balance);
     };
@@ -213,26 +223,32 @@ const MemberModule = (() => {
         const feesInput = document.querySelector('[name="fees"]');
         if (packageSelect) {
             packageSelect.addEventListener('change', (e) => {
-                const price = packagePrices[e.target.value];
+                const price = getPackageConfigById(e.target.value)?.price;
                 if (feesInput && price) feesInput.value = price;
                 updateBalanceDisplay();
             });
         }
 
         // Balance calculation
-        const discountInput = document.querySelector('[name="discount"]');
+        const discountValueInput = document.getElementById('discountValue');
+        const discountTypeInput = document.getElementById('discountType');
         const paidInput = document.querySelector('[name="paidAmount"]');
         const balanceInput = document.querySelector('[name="balance"]');
 
         const updateBalance = () => {
             const fees = parseFloat(feesInput?.value || 0);
-            const discount = parseFloat(discountInput?.value || 0);
+            const discount = calculateDiscountAmount(
+                fees,
+                parseFloat(discountValueInput?.value || 0),
+                discountTypeInput?.value || 'amount'
+            );
             const paid = parseFloat(paidInput?.value || 0);
             const balance = calculateBalance(fees, discount, paid);
             if (balanceInput) balanceInput.value = balance.toFixed(2);
         };
 
-        if (discountInput) discountInput.addEventListener('input', updateBalance);
+        if (discountValueInput) discountValueInput.addEventListener('input', updateBalance);
+        if (discountTypeInput) discountTypeInput.addEventListener('change', updateBalance);
         if (paidInput) paidInput.addEventListener('input', updateBalance);
         if (feesInput) feesInput.addEventListener('input', updateBalance);
     };
@@ -242,12 +258,17 @@ const MemberModule = (() => {
      */
     const updateBalanceDisplay = () => {
         const feesInput = document.querySelector('[name="fees"]');
-        const discountInput = document.querySelector('[name="discount"]');
+        const discountValueInput = document.getElementById('discountValue');
+        const discountTypeInput = document.getElementById('discountType');
         const paidInput = document.querySelector('[name="paidAmount"]');
         const balanceInput = document.querySelector('[name="balance"]');
 
         const fees = parseFloat(feesInput?.value || 0);
-        const discount = parseFloat(discountInput?.value || 0);
+        const discount = calculateDiscountAmount(
+            fees,
+            parseFloat(discountValueInput?.value || 0),
+            discountTypeInput?.value || 'amount'
+        );
         const paid = parseFloat(paidInput?.value || 0);
         const balance = calculateBalance(fees, discount, paid);
         if (balanceInput) balanceInput.value = balance.toFixed(2);
@@ -422,14 +443,6 @@ const MemberModule = (() => {
             drawer.classList.remove('member-modal-mode');
         });
 
-        const observer = new MutationObserver(() => {
-            if (!drawer.classList.contains('active')) {
-                resetMemberModalState();
-                drawer.classList.remove('member-modal-mode');
-            }
-        });
-
-        observer.observe(drawer, { attributes: true, attributeFilter: ['class'] });
     };
 
     const bindDrawerControls = () => {
@@ -437,7 +450,7 @@ const MemberModule = (() => {
         drawerControlsBound = true;
 
         document.body.addEventListener('click', (event) => {
-            const target = event.target.closest('#btn-start-camera, #btn-snap-photo, #btn-save-download');
+            const target = event.target.closest('#btn-start-camera, #btn-snap-photo, #btn-edit-invoice, #btn-download-whatsapp, #btn-save-add-another');
             if (!target) return;
 
             if (target.id === 'btn-start-camera') {
@@ -452,11 +465,24 @@ const MemberModule = (() => {
                 return;
             }
 
-            if (target.id === 'btn-save-download') {
+            if (target.id === 'btn-edit-invoice') {
                 event.preventDefault();
-                if (memberSubmitInFlight) return;
-                console.log('Save Clicked');
-                document.getElementById('add-member-form')?.requestSubmit();
+                closeInvoicePreviewModal();
+                if (pendingMemberFormData || pendingInvoiceMemberData) {
+                    openForm(pendingMemberFormData || pendingInvoiceMemberData, pendingInvoiceEditTarget);
+                }
+                return;
+            }
+
+            if (target.id === 'btn-download-whatsapp') {
+                event.preventDefault();
+                downloadAndSendInvoice();
+                return;
+            }
+
+            if (target.id === 'btn-save-add-another') {
+                event.preventDefault();
+                saveMemberAndKeepFormOpen();
                 return;
             }
         });
@@ -555,20 +581,6 @@ const MemberModule = (() => {
 
         try {
             await yieldToBrowser();
-
-            const qrContainer = tempWrapper.querySelector('#member-qr-code');
-            if (qrContainer && typeof QRCode !== 'undefined') {
-                qrContainer.innerHTML = '';
-                new QRCode(qrContainer, {
-                    text: String(memberData.memberId || ''),
-                    width: 132,
-                    height: 132,
-                    colorDark: '#1F2722',
-                    colorLight: '#FFFFFF',
-                    correctLevel: QRCode.CorrectLevel.M
-                });
-            }
-
             await yieldToBrowser();
             const safeMemberId = String(memberData.memberId || 'invoice').replace(/[^\w-]+/g, '-');
             await downloadInvoicePDF(`${safeMemberId}.pdf`, tempWrapper.querySelector('.invoice-container'));
@@ -613,10 +625,33 @@ const MemberModule = (() => {
 
             section.fields.forEach((field, fieldIndex) => {
                 let value = editMember?.[field.name] || '';
+
+                if (typeof value === 'string' && value.trim().toUpperCase() === 'NA') {
+                    value = '';
+                }
                 
                 // Generate member ID if needed
                 if (field.name === 'memberId' && !value) {
                     value = generateMemberId();
+                }
+
+                if (field.name === 'discount') {
+                    const discountType = editMember?.discountType === 'percent' ? 'percent' : 'amount';
+                    const discountValue = editMember?.discountValue ?? editMember?.discount ?? '';
+                    formHTML += `
+                        <div class="form-group" style="display: flex; flex-direction: column; width: 100%;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; width: 100%;">
+                                <label style="margin: 0;">Discount</label>
+                                <select name="discountType" id="discountType" style="width: auto; min-width: 90px; height: 32px; padding: 0 8px; border-radius: 6px; background-color: var(--bg-soft, #f3f4f6); border: 1px solid var(--border-color, #e5e7eb); color: var(--text-primary); font-size: 0.85rem; outline: none;">
+                                    <option value="amount" ${discountType === 'amount' ? 'selected' : ''}>₹ (Flat)</option>
+                                    <option value="percent" ${discountType === 'percent' ? 'selected' : ''}>% (Percent)</option>
+                                </select>
+                            </div>
+                            <input type="number" class="form-input" name="discountValue" id="discountValue" placeholder="0" min="0" value="${discountValue}" style="width: 100%;">
+                            <div class="field-error" aria-live="polite"></div>
+                        </div>
+                    `;
+                    return;
                 }
 
                 formHTML += '<div class="form-group">';
@@ -628,11 +663,20 @@ const MemberModule = (() => {
                         ${field.required ? 'required' : ''} 
                         ${field.readonly ? 'readonly' : ''}>${value}</textarea>`;
                 } else if (field.type === 'select') {
+                    const selectOptions = field.name === 'package'
+                        ? [
+                            { value: '', label: 'Choose a Package' },
+                            ...getAvailablePackages().map((pkg) => ({
+                                value: pkg.id,
+                                label: `${pkg.name} - ${pkg.durationMonths} Months (${formatINR(pkg.price)})`
+                            }))
+                        ]
+                        : field.options;
                     formHTML += `<select class="form-input" name="${field.name}" 
                         data-validation="${field.validation || ''}"
                         ${field.required ? 'required' : ''} 
                         ${field.readonly ? 'readonly' : ''}>`;
-                    field.options.forEach(opt => {
+                    selectOptions.forEach(opt => {
                         formHTML += `<option value="${opt.value}" ${opt.value === value ? 'selected' : ''}>${opt.label}</option>`;
                     });
                     formHTML += '</select>';
@@ -654,6 +698,29 @@ const MemberModule = (() => {
             formHTML += '</div>';
         });
 
+        formHTML += `
+            <div class="terms-section">
+                <div class="form-section-title">
+                    <span class="material-icons-round">gavel</span>
+                    Terms & Conditions
+                </div>
+                <div class="terms-box">
+                    <p>1. Membership fees are non-refundable once activated.</p>
+                    <p>2. Members must carry or present their membership ID for entry and attendance check-in.</p>
+                    <p>3. The gym is not responsible for loss of personal belongings left unattended.</p>
+                    <p>4. Members must follow trainer instructions and use equipment responsibly.</p>
+                    <p>5. Any medical condition or injury must be disclosed before participating in workouts.</p>
+                    <p>6. Misconduct, unsafe behavior, or repeated rule violations may result in membership suspension.</p>
+                    <p>7. Renewal reminders and invoices may be shared through WhatsApp, SMS, or email.</p>
+                </div>
+                <label class="terms-check">
+                    <input type="checkbox" name="agreeTerms" id="agree-terms" ${editMember?.agreeTerms ? 'checked' : ''} required>
+                    <span>I agree to the Terms and Conditions</span>
+                </label>
+                <div class="field-error" aria-live="polite"></div>
+            </div>
+        `;
+
         formHTML += '</div>';
         return formHTML;
     };
@@ -661,8 +728,8 @@ const MemberModule = (() => {
     /**
      * Open member form modal
      */
-    const openForm = (editMember = null) => {
-        currentEditMember = editMember;
+    const openForm = (editMember = null, editTarget = null) => {
+        currentEditMember = editTarget || (editMember?.id ? editMember : null);
         const title = editMember ? `Edit Member - ${editMember.firstName} ${editMember.lastName}` : 'Add New Member';
         const formHTML = `
             <form id="add-member-form" novalidate>
@@ -673,20 +740,13 @@ const MemberModule = (() => {
         UIComponents.openModal(title, {
             content: formHTML,
             buttons: [
-                { id: 'btn-save-download', label: 'Save & Download Invoice', action: 'custom', type: 'primary' }
+                ...(editMember ? [] : [{ id: 'btn-save-add-another', label: 'Save & Add Another', action: 'custom', type: 'secondary' }]),
+                { id: 'btn-save-preview', label: 'Save & Preview Invoice', action: 'custom', type: 'primary', form: 'add-member-form' }
             ]
         });
 
         const modal = document.querySelector('.modal-drawer');
-        const form = modal?.querySelector('#add-member-form');
-        const submitBtn = modal?.querySelector('#modal-footer #btn-save-download');
         modal?.classList.add('member-modal-mode');
-
-        if (submitBtn) {
-            submitBtn.setAttribute('data-member-submit', 'true');
-            submitBtn.type = 'submit';
-            submitBtn.form = 'add-member-form';
-        }
 
         if (window.ValidationUtils) {
             ValidationUtils.attachLiveValidation(modal);
@@ -717,11 +777,217 @@ const MemberModule = (() => {
 
         inputs?.forEach(input => {
             if (input.name) {
-                formData[input.name] = input.value;
+                formData[input.name] = input.type === 'checkbox' ? input.checked : input.value;
             }
         });
 
         return formData;
+    };
+
+    const sanitizePhoneNumber = (value = '') => String(value).replace(/\D/g, '').slice(-10);
+
+    const normalizeMemberDraftData = (formData = {}, editTarget = null) => ({
+        ...formData,
+        email: String(formData.email || '').trim() || 'NA',
+        address: String(formData.address || '').trim() || 'NA',
+        age: Number(formData.age) || 0,
+        fees: Number(formData.fees) || 0,
+        discountValue: Number(formData.discountValue) || 0,
+        discountType: formData.discountType || 'amount',
+        discount: calculateDiscountAmount(
+            Number(formData.fees) || 0,
+            Number(formData.discountValue) || 0,
+            formData.discountType || 'amount'
+        ),
+        paidAmount: Number(formData.paidAmount) || 0,
+        balance: Number(formData.balance) || 0,
+        status: 'active',
+        joinedDate: new Date().toISOString().split('T')[0],
+        memberId: editTarget?.memberId || formData.memberId || generateMemberId()
+    });
+
+    const openInvoicePreviewModal = (memberData) => {
+        const previewModal = document.getElementById('invoice-preview-modal');
+        const renderArea = document.getElementById('invoice-render-area');
+        if (!previewModal || !renderArea) return;
+
+        renderArea.innerHTML = generateInvoiceHTML(memberData);
+        previewModal.classList.add('active');
+        previewModal.setAttribute('aria-hidden', 'false');
+    };
+
+    const closeInvoicePreviewModal = () => {
+        const previewModal = document.getElementById('invoice-preview-modal');
+        const renderArea = document.getElementById('invoice-render-area');
+
+        previewModal?.classList.remove('active');
+        previewModal?.setAttribute('aria-hidden', 'true');
+        if (renderArea) {
+            renderArea.innerHTML = '';
+        }
+    };
+
+    const persistMemberRecord = async (memberData, editTarget = null) => {
+        const fullName = `${memberData.firstName || ''} ${memberData.lastName || ''}`.trim();
+        const member = editTarget?.id
+            ? StateManager.Members.update(editTarget.id, memberData)
+            : StateManager.Members.create(memberData);
+        const persistedMember = { ...memberData, id: member.id };
+
+        if (window.AsyncStateManager?.Members?.upsert) {
+            await AsyncStateManager.Members.upsert({
+                ...memberData,
+                id: member.id,
+                memberId: member.memberId || memberData.memberId
+            });
+        }
+
+        StateManager.Receipts.create({
+            memberId: member.id,
+            memberName: fullName,
+            amount: memberData.paidAmount,
+            discount: memberData.discount,
+            totalAmount: memberData.fees,
+            package: memberData.package,
+            paymentMode: memberData.paymentMode,
+            note: `${editTarget?.id ? 'Member Updated' : 'New Member Registration'} - ${memberData.package}`,
+            receiptDate: new Date().toISOString().split('T')[0]
+        });
+
+        renderMembersTableSafe();
+        if (window.DashboardAnalytics?.refresh) {
+            DashboardAnalytics.refresh();
+        }
+        if (typeof window.renderReportsHub === 'function') {
+            renderReportsHub();
+        }
+
+        return persistedMember;
+    };
+
+    const validateMemberDraft = (formData) => {
+        const fullName = `${formData.firstName || ''} ${formData.lastName || ''}`.trim();
+        const phone = String(formData.contact || '').trim();
+
+        if (!fullName || !phone) {
+            UIComponents.showToast('Name and phone are required.', 'error', 'Validation Error');
+            return false;
+        }
+
+        if (window.ValidationUtils) {
+            const validationTarget = document.querySelector('.modal-drawer');
+            if (!ValidationUtils.validateForm(validationTarget)) {
+                UIComponents.showToast('Please correct the highlighted fields', 'error', 'Validation Error');
+                return false;
+            }
+        }
+
+        if (!formData.agreeTerms) {
+            window.alert('Please agree to the Terms and Conditions before continuing.');
+            return false;
+        }
+
+        return true;
+    };
+
+    const resetMemberFormForNextEntry = () => {
+        const form = document.getElementById('add-member-form');
+        if (!form) return;
+
+        form.reset();
+        const memberIdInput = form.querySelector('[name="memberId"]');
+        if (memberIdInput) {
+            memberIdInput.value = generateMemberId();
+        }
+
+        currentEditMember = null;
+        pendingMemberFormData = null;
+        pendingInvoiceEditTarget = null;
+        pendingInvoiceMemberData = null;
+        pendingInvoiceNeedsPersistence = false;
+        resetMemberModalState();
+        updateBalanceDisplay();
+    };
+
+    const saveMemberAndKeepFormOpen = async () => {
+        if (memberSubmitInFlight) return;
+
+        const formData = collectFormData();
+        const triggerButton = document.getElementById('btn-save-add-another');
+
+        try {
+            memberSubmitInFlight = true;
+
+            if (!validateMemberDraft(formData)) {
+                return;
+            }
+
+            if (triggerButton) {
+                triggerButton.disabled = true;
+                triggerButton.textContent = 'Saving...';
+            }
+
+            const memberDraft = normalizeMemberDraftData(formData, null);
+            const savedMember = await persistMemberRecord(memberDraft, null);
+            UIComponents.showToast(`${savedMember.firstName || 'Member'} Saved!`, 'success', 'Member Added');
+            resetMemberFormForNextEntry();
+        } catch (error) {
+            console.error('[MemberModule] Save & Add Another failed', error);
+            UIComponents.showToast('Unable to save this member right now.', 'error', 'Save Failed');
+        } finally {
+            if (triggerButton) {
+                triggerButton.disabled = false;
+                triggerButton.textContent = 'Save & Add Another';
+            }
+            memberSubmitInFlight = false;
+        }
+    };
+
+    const downloadAndSendInvoice = async () => {
+        if (memberSubmitInFlight || !pendingInvoiceMemberData) {
+            return;
+        }
+
+        const renderArea = document.getElementById('invoice-render-area');
+        if (!renderArea) {
+            return;
+        }
+
+        try {
+            memberSubmitInFlight = true;
+            const safeMemberId = String(pendingInvoiceMemberData.memberId || 'invoice').replace(/[^\w-]+/g, '-');
+            await downloadInvoicePDF(`${safeMemberId}.pdf`, renderArea);
+
+            const phoneNumber = sanitizePhoneNumber(pendingInvoiceMemberData.contact);
+            if (!phoneNumber) {
+                window.alert('A valid phone number is required to open WhatsApp.');
+                return;
+            }
+
+            const message = encodeURIComponent(`Welcome to the Gym! Here is your invoice for ${pendingInvoiceMemberData.firstName || 'your membership'}.`);
+            const whatsappUrl = `https://wa.me/91${phoneNumber}?text=${message}`;
+            window.open(whatsappUrl, '_blank');
+
+            if (pendingInvoiceNeedsPersistence) {
+                await persistMemberRecord(pendingInvoiceMemberData, pendingInvoiceEditTarget);
+                UIComponents.showToast(
+                    `Member ${(pendingInvoiceMemberData.firstName || '').trim()} saved successfully!`,
+                    'success',
+                    pendingInvoiceEditTarget?.id ? 'Member Updated' : 'Member Created'
+                );
+            }
+
+            closeInvoicePreviewModal();
+            pendingMemberFormData = null;
+            pendingInvoiceNeedsPersistence = false;
+            pendingInvoiceEditTarget = null;
+            pendingInvoiceMemberData = null;
+        } catch (error) {
+            console.error('[MemberModule] Invoice download/WhatsApp failed', error);
+            UIComponents.showToast('Unable to complete the invoice handoff.', 'error', 'Invoice Error');
+        } finally {
+            memberSubmitInFlight = false;
+        }
     };
 
     /**
@@ -733,100 +999,38 @@ const MemberModule = (() => {
 
         const modal = document.querySelector('.modal-drawer');
         const form = modal?.querySelector('#add-member-form');
-        const submitButton = modal?.querySelector('[data-member-submit]');
+        const submitButton = modal?.querySelector('#btn-save-preview');
         const formData = collectFormData();
-        const fullName = `${formData.firstName || ''} ${formData.lastName || ''}`.trim();
-        const phone = String(formData.contact || '').trim();
-        let didPersist = false;
-        let savedMember = null;
 
         try {
             memberSubmitInFlight = true;
-            if (!fullName || !phone) {
-                UIComponents.showToast('Name and phone are required.', 'error', 'Validation Error');
+            if (!validateMemberDraft(formData)) {
                 return;
-            }
-
-            if (window.ValidationUtils) {
-                const validationTarget = document.querySelector('.modal-drawer');
-                if (!ValidationUtils.validateForm(validationTarget)) {
-                    UIComponents.showToast('Please correct the highlighted fields', 'error', 'Validation Error');
-                    return;
-                }
             }
 
             if (submitButton) {
                 submitButton.disabled = true;
-                submitButton.textContent = 'Processing...';
+                submitButton.textContent = 'Preparing Preview...';
             }
 
-            const memberData = {
-                ...formData,
-                age: Number(formData.age) || 0,
-                fees: Number(formData.fees) || 0,
-                discount: Number(formData.discount) || 0,
-                paidAmount: Number(formData.paidAmount) || 0,
-                balance: Number(formData.balance) || 0,
-                status: 'active',
-                joinedDate: new Date().toISOString().split('T')[0],
-                memberId: editMember?.memberId || formData.memberId || generateMemberId()
-            };
+            pendingMemberFormData = { ...formData };
+            pendingInvoiceMemberData = normalizeMemberDraftData(formData, editMember);
+            pendingInvoiceEditTarget = editMember?.id ? editMember : null;
+            pendingInvoiceNeedsPersistence = true;
 
-            const member = editMember
-                ? StateManager.Members.update(editMember.id, memberData)
-                : StateManager.Members.create(memberData);
-            savedMember = { ...memberData, id: member.id };
-
-            if (window.AsyncStateManager?.Members?.upsert) {
-                await AsyncStateManager.Members.upsert({
-                    ...memberData,
-                    id: member.id,
-                    memberId: member.memberId || memberData.memberId
-                });
-            }
-
-            StateManager.Receipts.create({
-                memberId: member.id,
-                memberName: fullName,
-                amount: memberData.paidAmount,
-                discount: memberData.discount,
-                totalAmount: memberData.fees,
-                package: formData.package,
-                paymentMode: formData.paymentMode,
-                note: `${editMember ? 'Member Updated' : 'New Member Registration'} - ${formData.package}`,
-                receiptDate: new Date().toISOString().split('T')[0]
-            });
-
-            renderMembersTableSafe();
-            if (window.DashboardAnalytics?.refresh) {
-                DashboardAnalytics.refresh();
-            }
-            if (typeof window.renderReportsHub === 'function') {
-                renderReportsHub();
-            }
-
+            closeModal('modal-drawer');
             await yieldToBrowser();
-            await downloadMemberInvoice(savedMember);
-            didPersist = true;
+            openInvoicePreviewModal(pendingInvoiceMemberData);
         } catch (error) {
             console.error('[MemberModule] Form submission failed', error);
-            UIComponents.showToast('Unable to save member right now.', 'error', 'Save Failed');
+            UIComponents.showToast('Unable to prepare the invoice preview right now.', 'error', 'Preview Failed');
         } finally {
             if (submitButton) {
                 submitButton.disabled = false;
-                submitButton.textContent = 'Save & Download Invoice';
+                submitButton.textContent = 'Save & Preview Invoice';
             }
 
             memberSubmitInFlight = false;
-
-            if (didPersist) {
-                closeMemberDrawer();
-                UIComponents.showToast(
-                    `Member ${fullName} ${editMember ? 'updated' : 'added'} successfully!`,
-                    'success',
-                    editMember ? 'Member Updated' : 'Member Created'
-                );
-            }
         }
     };
 
@@ -834,55 +1038,156 @@ const MemberModule = (() => {
      * Show invoice preview modal
      */
     const showInvoicePreview = (memberData, autoOpen = false) => {
-        const invoiceHTML = generateInvoiceHTML(memberData);
-        
-        UIComponents.openModal('Member Invoice', {
-            content: invoiceHTML,
-            buttons: [
-                { label: 'Close', action: 'close', type: 'secondary' },
-                { label: 'Save & Download PDF', action: 'custom', type: 'primary' }
-            ]
-        });
-
-        const modal = document.querySelector('.modal-drawer');
-        const printBtn = modal?.querySelector('#modal-footer button:last-child');
-
-        if (printBtn) {
-            printBtn.onclick = async () => {
-                const safeMemberId = String(memberData.memberId || 'invoice').replace(/[^\w-]+/g, '-');
-                await downloadInvoicePDF(`${safeMemberId}.pdf`);
-            };
-        }
-
-        requestAnimationFrame(() => {
-            const qrContainer = document.getElementById('member-qr-code');
-            if (!qrContainer || typeof QRCode === 'undefined') {
-                return;
-            }
-
-            qrContainer.innerHTML = '';
-            new QRCode(qrContainer, {
-                text: String(memberData.memberId || ''),
-                width: 132,
-                height: 132,
-                colorDark: '#1F2722',
-                colorLight: '#FFFFFF',
-                correctLevel: QRCode.CorrectLevel.M
-            });
-        });
+        pendingMemberFormData = { ...memberData, agreeTerms: true };
+        pendingInvoiceMemberData = normalizeMemberDraftData(memberData, memberData?.id ? memberData : null);
+        pendingInvoiceEditTarget = memberData?.id ? memberData : null;
+        pendingInvoiceNeedsPersistence = false;
+        openInvoicePreviewModal(pendingInvoiceMemberData);
     };
 
     /**
      * Generate invoice HTML
      */
     const generateInvoiceHTML = (memberData) => {
-        const discountAmount = (memberData.fees * (memberData.discount || 0)) / 100;
+        const discountAmount = Number(memberData.discount) || 0;
         const balance = calculateBalance(memberData.fees, memberData.discount, memberData.paidAmount);
         const nextDueDate = memberData.endDate || new Date().toLocaleDateString();
 
         // Get company settings
         const settings = SettingsManager.getCompanyProfile();
         const tax = SettingsManager.getTaxConfiguration();
+        const taxAmount = ((memberData.fees - discountAmount) * tax.taxPercentage) / 100;
+        const totalAmount = (memberData.fees - discountAmount) + taxAmount;
+        const status = getMemberStatus(memberData.endDate);
+        const escapeInvoice = (value) => String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+        const applyCorsProxy = (url) => {
+            if (!url || url.startsWith('data:')) return url;
+            return 'https://corsproxy.io/?' + encodeURIComponent(url);
+        };
+        const gymName = String(settings?.gymName || 'Gym CRM').trim();
+        const logoUrl = typeof settings?.logoUrl === 'string' ? settings.logoUrl.trim() : '';
+        const signatureUrl = typeof settings?.signatureUrl === 'string' ? settings.signatureUrl.trim() : '';
+        const finalLogoUrl = logoUrl ? applyCorsProxy(logoUrl) : null;
+        const finalSignatureUrl = signatureUrl ? applyCorsProxy(signatureUrl) : null;
+        const logoMarkup = finalLogoUrl
+            ? `<img src="${escapeInvoice(finalLogoUrl)}" alt="Gym Logo" crossorigin="anonymous" style="max-height: 60px; object-fit: contain;" onerror="this.style.display='none'">`
+            : `<h2 style="margin:0;">${escapeInvoice(gymName)}</h2>`;
+        const signatureMarkup = finalSignatureUrl
+            ? `<img src="${escapeInvoice(finalSignatureUrl)}" alt="Digital Signature" crossorigin="anonymous" style="max-height: 50px; object-fit: contain;" onerror="this.style.display='none'">`
+            : '';
+        const brandMarkup = finalLogoUrl
+            ? `${logoMarkup}<div style="font-size: 28px; font-weight: 700; margin: 6px 0 6px;">${escapeInvoice(gymName)}</div>`
+            : logoMarkup;
+
+        return `
+            <div class="invoice-container" style="page-break-inside: avoid; background: #ffffff; color: #1c242f; padding: 24px; font-family: Arial, sans-serif; line-height: 1.45;">
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 18px;">
+                    <tr>
+                        <td style="vertical-align: top; width: 68%;">
+                            ${brandMarkup}
+                            <div style="font-size: 13px; color: #46515f;">${escapeInvoice(settings.fullAddress || 'NA')}</div>
+                            <div style="font-size: 13px; color: #46515f; margin-top: 4px;">Phone: ${escapeInvoice(settings.phone || 'NA')}</div>
+                            <div style="font-size: 13px; color: #46515f; margin-top: 2px;">Email: ${escapeInvoice(settings.email || 'NA')}</div>
+                            <div style="font-size: 13px; color: #46515f; margin-top: 2px;">Tax ID: ${escapeInvoice(settings.gstNumber || 'NA')}</div>
+                        </td>
+                        <td style="vertical-align: top; width: 32%; text-align: right;">
+                            <div style="font-size: 26px; font-weight: 700; margin-bottom: 6px;">INVOICE</div>
+                            <div style="font-size: 14px; color: #46515f; margin-bottom: 4px;">Invoice No: ${escapeInvoice(memberData.memberId || 'N/A')}</div>
+                            <div style="font-size: 14px; color: #46515f;">Date: ${escapeInvoice(formatMemberDate(new Date().toISOString().split('T')[0]))}</div>
+                        </td>
+                    </tr>
+                </table>
+
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 18px;">
+                    <tr>
+                        <td style="width: 49%; vertical-align: top; border: 1px solid #d9e0e7; padding: 12px; page-break-inside: avoid;">
+                            <div style="font-size: 15px; font-weight: 700; margin-bottom: 10px;">Member Details</div>
+                            <div style="font-size: 13px; margin-bottom: 6px;"><strong>Member ID:</strong> ${escapeInvoice(memberData.memberId || 'N/A')}</div>
+                            <div style="font-size: 13px; margin-bottom: 6px;"><strong>Name:</strong> ${escapeInvoice(`${memberData.firstName || ''} ${memberData.lastName || ''}`.trim() || 'N/A')}</div>
+                            <div style="font-size: 13px; margin-bottom: 6px;"><strong>Contact:</strong> ${escapeInvoice(memberData.contact || 'N/A')}</div>
+                            <div style="font-size: 13px; margin-bottom: 6px;"><strong>Email:</strong> ${escapeInvoice(memberData.email || 'NA')}</div>
+                            <div style="font-size: 13px; margin-bottom: 6px;"><strong>Address:</strong> ${escapeInvoice(memberData.address || 'NA')}</div>
+                            <div style="font-size: 13px; margin-bottom: 6px;"><strong>DOB:</strong> ${escapeInvoice(formatMemberDate(memberData.dob))}</div>
+                            <div style="font-size: 13px; margin-bottom: 6px;"><strong>Age:</strong> ${escapeInvoice(memberData.age || 'N/A')} years</div>
+                            <div style="font-size: 13px;"><strong>Blood Group:</strong> ${escapeInvoice(memberData.bloodGroup || 'NA')}</div>
+                        </td>
+                        <td style="width: 2%;"></td>
+                        <td style="width: 49%; vertical-align: top; border: 1px solid #d9e0e7; padding: 12px; page-break-inside: avoid;">
+                            <div style="font-size: 15px; font-weight: 700; margin-bottom: 10px;">Membership Details</div>
+                            <div style="font-size: 13px; margin-bottom: 6px;"><strong>Package:</strong> ${escapeInvoice(memberData.package || 'N/A')}</div>
+                            <div style="font-size: 13px; margin-bottom: 6px;"><strong>Start Date:</strong> ${escapeInvoice(formatMemberDate(memberData.startDate))}</div>
+                            <div style="font-size: 13px; margin-bottom: 6px;"><strong>End Date:</strong> ${escapeInvoice(formatMemberDate(memberData.endDate))}</div>
+                            <div style="font-size: 13px; margin-bottom: 6px;"><strong>Status:</strong> ${escapeInvoice(status.text)}</div>
+                            <div style="font-size: 13px; margin-bottom: 6px;"><strong>Next Due Date:</strong> ${escapeInvoice(formatMemberDate(nextDueDate))}</div>
+                            <div style="font-size: 13px; margin-bottom: 6px;"><strong>Payment Mode:</strong> ${escapeInvoice(memberData.paymentMode || 'N/A')}</div>
+                            <div style="font-size: 13px;"><strong>Health Notes:</strong> ${escapeInvoice(memberData.healthDetails || 'NA')}</div>
+                        </td>
+                    </tr>
+                </table>
+
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 18px; page-break-inside: avoid;">
+                    <thead>
+                        <tr>
+                            <th style="text-align: left; padding: 10px; border: 1px solid #d9e0e7; background: #f5f7fa; font-size: 13px;">Description</th>
+                            <th style="text-align: right; padding: 10px; border: 1px solid #d9e0e7; background: #f5f7fa; font-size: 13px;">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #d9e0e7; font-size: 13px;">${escapeInvoice(memberData.package || 'Membership')} Membership</td>
+                            <td style="padding: 10px; border: 1px solid #d9e0e7; text-align: right; font-size: 13px;">${escapeInvoice(formatINR(memberData.fees))}</td>
+                        </tr>
+                        ${memberData.discount > 0 ? `
+                            <tr>
+                                <td style="padding: 10px; border: 1px solid #d9e0e7; font-size: 13px;">Discount</td>
+                                <td style="padding: 10px; border: 1px solid #d9e0e7; text-align: right; font-size: 13px;">-${escapeInvoice(formatINR(discountAmount))}</td>
+                            </tr>
+                        ` : ''}
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #d9e0e7; font-size: 13px;"><strong>Subtotal</strong></td>
+                            <td style="padding: 10px; border: 1px solid #d9e0e7; text-align: right; font-size: 13px;"><strong>${escapeInvoice(formatINR(memberData.fees - discountAmount))}</strong></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #d9e0e7; font-size: 13px;"><strong>${escapeInvoice(tax.taxLabel)} (${escapeInvoice(tax.taxPercentage)}%)</strong></td>
+                            <td style="padding: 10px; border: 1px solid #d9e0e7; text-align: right; font-size: 13px;"><strong>${escapeInvoice(formatINR(taxAmount))}</strong></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #d9e0e7; background: #f5f7fa; font-size: 13px;"><strong>Total Amount</strong></td>
+                            <td style="padding: 10px; border: 1px solid #d9e0e7; background: #f5f7fa; text-align: right; font-size: 13px;"><strong>${escapeInvoice(formatINR(totalAmount))}</strong></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #d9e0e7; font-size: 13px;">Amount Paid</td>
+                            <td style="padding: 10px; border: 1px solid #d9e0e7; text-align: right; font-size: 13px;">${escapeInvoice(formatINR(memberData.paidAmount))}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #d9e0e7; font-size: 13px;">Outstanding Balance</td>
+                            <td style="padding: 10px; border: 1px solid #d9e0e7; text-align: right; font-size: 13px;">${escapeInvoice(formatINR(balance))}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <table style="width: 100%; border-collapse: collapse; margin-top: 28px; page-break-inside: avoid;">
+                    <tr>
+                        <td style="width: 50%; vertical-align: bottom; padding-right: 20px;">
+                            <div style="border-top: 1px solid #9aa6b2; padding-top: 8px; font-size: 12px; color: #46515f;">Member Signature</div>
+                        </td>
+                        <td style="width: 50%; vertical-align: bottom; text-align: right;">
+                            ${signatureMarkup ? `<div style="margin-bottom: 8px;">${signatureMarkup}</div>` : '<div style="height: 58px;"></div>'}
+                            <div style="border-top: 1px solid #9aa6b2; padding-top: 8px; font-size: 12px; color: #46515f; text-align: right;">Authorized Signature</div>
+                        </td>
+                    </tr>
+                </table>
+
+                <div style="margin-top: 18px; text-align: center; font-size: 12px; color: #61707f;">
+                    Thank you for enrolling with ${escapeInvoice(settings.gymName || 'our gym')}! Invoice generated on ${escapeInvoice(new Date().toLocaleString('en-IN'))}
+                </div>
+            </div>
+        `;
 
         const invoiceHTML = `
             <div class="invoice-container">
@@ -923,13 +1228,6 @@ const MemberModule = (() => {
                         <p><strong>End Date:</strong> ${new Date(memberData.endDate).toLocaleDateString()}</p>
                         <p><strong>Status:</strong> <span style="color: var(--success); font-weight: 600;">Active</span></p>
                         <p><strong>Next Due Date:</strong> ${new Date(memberData.endDate).toLocaleDateString()}</p>
-                    </div>
-
-                    <div class="invoice-section">
-                        <h4>Gym QR Check-In</h4>
-                        <div id="member-qr-code" style="display:flex; justify-content:center; padding: 0.75rem; background: rgba(13, 28, 47, 0.04); border-radius: 20px; min-height: 148px;"></div>
-                        <p style="margin-top: 0.85rem;"><strong>Encoded Member ID:</strong> ${memberData.memberId || 'N/A'}</p>
-                        <p style="font-size: 0.84rem; color: var(--on-surface-variant);">Scan this QR at the front desk for a fast attendance check-in.</p>
                     </div>
 
                     <div class="invoice-details">
@@ -1033,9 +1331,49 @@ const MemberModule = (() => {
 
     const formatMemberDate = (value) => {
         if (!value) return 'N/A';
-        const parsedDate = new Date(value);
-        return Number.isNaN(parsedDate.getTime()) ? 'N/A' : parsedDate.toLocaleDateString();
+        const parsedDate = parseMemberEndDate(value);
+        return parsedDate ? parsedDate.toLocaleDateString('en-IN') : 'N/A';
     };
+
+    function parseMemberEndDate(endDateString) {
+        const rawValue = String(endDateString || '').trim();
+        if (!rawValue || rawValue.toUpperCase() === 'NA') {
+            return null;
+        }
+
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(rawValue)) {
+            const [day, month, year] = rawValue.split('/').map(Number);
+            const parsed = new Date(year, month - 1, day);
+            return Number.isNaN(parsed.getTime()) ? null : parsed;
+        }
+
+        if (/^\d{4}-\d{2}-\d{2}$/.test(rawValue)) {
+            const [year, month, day] = rawValue.split('-').map(Number);
+            const parsed = new Date(year, month - 1, day);
+            return Number.isNaN(parsed.getTime()) ? null : parsed;
+        }
+
+        const parsed = new Date(rawValue);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    function getMemberStatus(endDateString) {
+        const parsedEndDate = parseMemberEndDate(endDateString);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (!parsedEndDate) {
+            return { text: 'Inactive', className: 'status-inactive' };
+        }
+
+        parsedEndDate.setHours(0, 0, 0, 0);
+
+        if (parsedEndDate >= today) {
+            return { text: 'Active', className: 'status-active' };
+        }
+
+        return { text: 'Inactive', className: 'status-inactive' };
+    }
 
     const normalizeMember = (member = {}) => ({
         ...member,
@@ -1048,7 +1386,7 @@ const MemberModule = (() => {
         package: String(member.package || 'N/A'),
         endDate: member.endDate || '',
         balance: Number(member.balance) || 0,
-        status: String(member.status || 'inactive').toLowerCase(),
+        status: getMemberStatus(member.endDate).text.toLowerCase(),
         gender: String(member.gender || '').toLowerCase()
     });
 
@@ -1102,10 +1440,8 @@ const MemberModule = (() => {
         if (emptyState) emptyState.style.display = 'none';
 
         tbody.innerHTML = members.map(member => {
-            const endDate = new Date(member.endDate);
-            const daysLeft = Math.ceil((endDate - new Date()) / (1000 * 60 * 60 * 24));
-            const statusClass = member.status === 'active' ? 'status-active' : 'status-due';
-            const statusText = member.status === 'active' ? 'Active' : 'Inactive';
+            const endDate = parseMemberEndDate(member.endDate);
+            const status = getMemberStatus(member.endDate);
             const balanceText = member.balance > 0 ? `₹${member.balance.toFixed(2)}` : 'Paid';
 
             return `
@@ -1114,9 +1450,9 @@ const MemberModule = (() => {
                     <td>${member.firstName} ${member.lastName}</td>
                     <td>${window.WhatsAppUtils ? WhatsAppUtils.createContactLink(member.contact, `Hello ${member.firstName || ''}, welcome to Kinetic Atelier.`) : member.contact}</td>
                     <td>${member.package}</td>
-                    <td>${endDate.toLocaleDateString()}</td>
+                    <td>${endDate ? endDate.toLocaleDateString('en-IN') : 'N/A'}</td>
                     <td>${balanceText}</td>
-                    <td><span class="status-chip ${statusClass}">${statusText}</span></td>
+                    <td><span class="status-pill ${status.className}">${status.text}</span></td>
                     <td>
                         <div class="action-buttons">
                             <button class="btn-icon" onclick="MemberModule.openForm(StateManager.Members.getById('${member.id}'))">
@@ -1146,8 +1482,7 @@ const MemberModule = (() => {
     };
 
     const createMemberRow = (member) => {
-        const statusClass = member.status === 'active' ? 'status-active' : 'status-due';
-        const statusText = member.status === 'active' ? 'Active' : 'Inactive';
+        const status = getMemberStatus(member.endDate);
         const balanceText = member.balance > 0 ? formatINR(member.balance) : 'Paid';
         const whatsappContact = window.WhatsAppUtils
             ? WhatsAppUtils.createContactLink(member.contact, `Hello ${member.firstName || ''}, welcome to Kinetic Atelier.`)
@@ -1161,7 +1496,7 @@ const MemberModule = (() => {
                 <td>${member.package}</td>
                 <td>${formatMemberDate(member.endDate)}</td>
                 <td>${balanceText}</td>
-                <td><span class="status-chip ${statusClass}">${statusText}</span></td>
+                <td><span class="status-pill ${status.className}">${status.text}</span></td>
                 <td>
                     <div class="action-buttons">
                         <button class="btn-icon" type="button" data-action="edit" data-member-id="${member.id}">

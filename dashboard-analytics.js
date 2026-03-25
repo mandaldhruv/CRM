@@ -195,28 +195,38 @@ const DashboardAnalytics = (() => {
                     <h4>Today's Birthdays</h4>
                     <span class="widget-count">${birthdays.length}</span>
                 </div>
-                <div class="widget-content">
+                <div class="widget-content birthday-widget-content">
         `;
 
         if (birthdays.length === 0) {
-            html += `<p style="color: var(--on-surface-variant); font-size: 0.9rem;">No birthdays today</p>`;
+            html += `
+                <div class="birthday-empty">
+                    <span class="material-icons-round">celebration</span>
+                    <p>No birthdays today.</p>
+                </div>
+            `;
         } else {
-            html += `<ul class="follow-up-list">`;
+            html += `<div class="birthday-list">`;
             birthdays.forEach((member) => {
                 const age = new Date().getFullYear() - new Date(member.dob).getFullYear();
+                const fullName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Member';
                 html += `
-                    <li class="follow-up-item">
-                        <div class="item-info">
-                            <span class="item-name">${member.firstName} ${member.lastName}</span>
-                            <span class="item-detail">Turning ${age} today</span>
+                    <div class="birthday-item">
+                        <div class="birthday-avatar">
+                            <span class="material-icons-round">cake</span>
                         </div>
-                        <button class="btn-action" onclick="UIComponents.showToast('Send birthday wishes to ${member.firstName}!', 'info', 'Reminder')">
-                            <span class="material-icons-round">mail</span>
+                        <div class="birthday-content">
+                            <h4>${fullName}</h4>
+                            <p>Turning ${age} today</p>
+                        </div>
+                        <button class="btn-icon birthday-wish-btn" type="button" title="Send Wish" data-action="wish-birthday" data-phone="${String(member.contact || '').replace(/"/g, '&quot;')}" data-name="${String(member.firstName || '').replace(/"/g, '&quot;')}">
+                            <span class="material-icons-round">whatsapp</span>
+                            <span>Wish Them</span>
                         </button>
-                    </li>
+                    </div>
                 `;
             });
-            html += `</ul>`;
+            html += `</div>`;
         }
 
         html += `</div></div>`;

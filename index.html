@@ -43,14 +43,17 @@
             height: 100vh;
         }
 
-        body.dark-theme {
+        body.dark-theme,
+        [data-theme="dark"] {
             --surface: #121212;
             --surface-container-low: #1b1b1b;
             --surface-container-highest: #2a2a2a;
             --on-surface: #ffffff;
             --on-surface-variant: #b8bcc8;
-            --primary: #8f7cff;
-            --primary-gradient: linear-gradient(135deg, #6d5efc 0%, #8f7cff 100%);
+            --primary: #D4A84B;
+            --primary-hover: #C2963B;
+            --primary-light: #F2D48C;
+            --primary-gradient: linear-gradient(135deg, #D4A84B 0%, #D4A84B 100%);
             --success: #72d572;
             --error: #ff8a80;
             --warning: #ffb74d;
@@ -331,14 +334,27 @@
             font-weight: 600;
         }
 
+        .status-pill {
+            padding: 4px 12px;
+            border-radius: 99px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: inline-block;
+        }
+
         .status-active {
-            background: #e8f5e9;
-            color: #2e7d32;
+            background-color: #E6F4EA;
+            color: #1E4620;
         }
 
         .status-due {
             background: #fff3e0;
             color: #ef6c00;
+        }
+
+        .status-inactive {
+            background-color: #FCE8E6;
+            color: #A50E0E;
         }
 
         .status-urgent {
@@ -445,8 +461,11 @@
             flex: 1;
             min-height: 0;
             overflow-y: auto;
+            overflow-x: hidden;
             padding: 2rem;
             padding-bottom: 2rem;
+            box-sizing: border-box;
+            max-width: 100%;
         }
 
         .modal-footer,
@@ -738,13 +757,14 @@
             gap: 0.65rem;
             padding: 0.8rem 1rem;
             border-radius: 16px;
-            background: var(--surface-container-low);
-            color: var(--on-surface);
+            background: #233646;
+            color: #f8fbff;
             font-weight: 600;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
         }
 
         .hr-kpi .material-icons-round {
-            color: var(--primary);
+            color: #d8ecff;
         }
 
         .attendance-actions {
@@ -1200,10 +1220,11 @@
             align-items: center;
             justify-content: space-between;
             padding: 1.5rem;
-            background: white;
-            border: 1px solid rgba(13, 28, 47, 0.08);
+            background: var(--bg-surface);
+            border: 1px solid var(--border-soft);
             border-radius: 12px;
             transition: var(--transition);
+            color: var(--text-primary);
         }
 
         .package-row:hover {
@@ -1218,13 +1239,13 @@
         .package-info h4 {
             margin: 0;
             font-size: 1rem;
-            color: var(--on-surface);
+            color: var(--text-primary);
         }
 
         .package-info p {
             margin: 0.5rem 0 0 0;
             font-size: 0.85rem;
-            color: var(--on-surface-variant);
+            color: var(--text-secondary);
         }
 
         .package-actions {
@@ -1734,6 +1755,9 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 2rem;
+            box-sizing: border-box;
+            max-width: 100%;
+            overflow-x: hidden;
         }
 
         .form-section {
@@ -1744,6 +1768,9 @@
             background: rgba(13, 28, 47, 0.02);
             border-radius: 12px;
             border: 1px solid rgba(13, 28, 47, 0.08);
+            box-sizing: border-box;
+            max-width: 100%;
+            min-width: 0;
         }
 
         .form-section-title {
@@ -1772,6 +1799,16 @@
 
         .member-form-row.single {
             grid-template-columns: 1fr;
+        }
+
+        .member-form-container *,
+        .form-section,
+        .form-group,
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            box-sizing: border-box;
+            max-width: 100%;
         }
 
         /* --- INVOICE MODAL --- */
@@ -1997,6 +2034,116 @@
             background: rgba(13, 28, 47, 0.02);
             border-radius: 8px;
             border-left: 3px solid var(--primary);
+        }
+
+        .birthday-widget-content {
+            padding-top: 0.35rem;
+        }
+
+        .birthday-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+            overflow-x: hidden;
+        }
+
+        .birthday-item {
+            display: flex;
+            align-items: center;
+            gap: 0.9rem;
+            padding: 0.95rem 1rem;
+            border-radius: 18px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-soft);
+            box-shadow: var(--shadow-soft);
+        }
+
+        .birthday-avatar {
+            width: 46px;
+            height: 46px;
+            border-radius: 999px;
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: color-mix(in srgb, var(--brand-primary, var(--primary)) 22%, var(--bg-surface) 78%);
+            color: var(--text-primary);
+        }
+
+        .birthday-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .birthday-content h4 {
+            margin: 0;
+            font-size: 0.98rem;
+            color: var(--text-primary);
+        }
+
+        .birthday-content p {
+            margin: 0.2rem 0 0 0;
+            font-size: 0.87rem;
+            color: var(--text-secondary);
+        }
+
+        .birthday-item .btn-icon {
+            min-width: 126px;
+            height: 42px;
+            padding: 0 0.95rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-soft);
+            background: #25D366;
+            color: #ffffff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            cursor: pointer;
+            font-weight: 700;
+            transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 10px 22px rgba(37, 211, 102, 0.24);
+        }
+
+        .birthday-item .btn-icon:hover {
+            transform: translateY(-1px);
+            background: #1fb95a;
+            box-shadow: 0 12px 24px rgba(37, 211, 102, 0.32);
+        }
+
+        .birthday-wish-btn {
+            animation: birthdayPulse 1.8s ease-in-out infinite;
+        }
+
+        @keyframes birthdayPulse {
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.22);
+            }
+
+            50% {
+                box-shadow: 0 0 0 10px rgba(37, 211, 102, 0);
+            }
+        }
+
+        .birthday-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 1.8rem 1rem;
+            border-radius: 18px;
+            background: var(--bg-surface);
+            border: 1px dashed var(--border-soft);
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        .birthday-empty .material-icons-round {
+            font-size: 2rem;
+            opacity: 0.5;
+            color: var(--brand-primary, var(--primary));
         }
 
         .item-info {
@@ -2293,7 +2440,8 @@
             --error: var(--error-text);
         }
 
-        .dark-theme {
+        .dark-theme,
+        [data-theme="dark"] {
             --bg-app: #1A2220;
             --bg-sidebar: #222E2C;
             --bg-surface: #2A3835;
@@ -2318,6 +2466,8 @@
             --on-surface: var(--text-primary);
             --on-surface-variant: var(--text-secondary);
             --primary: var(--brand-primary);
+            --primary-hover: var(--brand-primary-hover);
+            --primary-light: #F2D48C;
             --primary-gradient: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary) 100%);
             --success: var(--success-text);
             --warning: var(--warning-text);
@@ -2580,8 +2730,10 @@
         }
 
         .status-chip,
+        .status-pill,
         .status-active,
         .status-due,
+        .status-inactive,
         .status-urgent {
             display: inline-flex;
             align-items: center;
@@ -2595,13 +2747,18 @@
         }
 
         .status-active {
-            background: var(--success-bg);
-            color: var(--success-text);
+            background-color: #E6F4EA;
+            color: #1E4620;
         }
 
         .status-due {
             background: var(--warning-bg);
             color: var(--warning-text);
+        }
+
+        .status-inactive {
+            background-color: #FCE8E6;
+            color: #A50E0E;
         }
 
         .status-urgent {
@@ -2711,7 +2868,12 @@
         }
 
         .member-modal-mode .modal-footer {
-            display: none;
+            display: flex;
+            position: sticky;
+            bottom: 0;
+            z-index: 4;
+            background: var(--bg-surface);
+            gap: 1rem;
         }
 
         .member-modal-mode .modal-header {
@@ -2729,11 +2891,11 @@
             padding-top: 1.25rem;
         }
 
-        #btn-save-download {
+        #btn-save-preview {
             min-width: 260px;
         }
 
-        #btn-save-download:active,
+        #btn-save-preview:active,
         .btn-primary:active {
             transform: scale(0.98);
         }
@@ -2788,6 +2950,109 @@
             color: var(--text-secondary);
             font-size: 0.92rem;
             line-height: 1.6;
+        }
+
+        .terms-section {
+            grid-column: 1 / -1;
+            display: grid;
+            gap: 0.85rem;
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 22px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-soft);
+        }
+
+        .terms-box {
+            height: 120px;
+            overflow-y: auto;
+            background: var(--bg-soft, var(--bg-app));
+            border: 1px solid var(--border-color, var(--border-soft));
+            padding: 12px;
+            font-size: 0.85rem;
+            line-height: 1.65;
+            border-radius: 16px;
+            color: var(--text-secondary);
+        }
+
+        .terms-check {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            font-size: 0.92rem;
+            color: var(--text-primary);
+        }
+
+        .terms-check input {
+            margin-top: 0.15rem;
+            width: 18px;
+            height: 18px;
+            flex: 0 0 auto;
+        }
+
+        .invoice-preview-modal {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            background: rgba(7, 16, 28, 0.58);
+            backdrop-filter: blur(12px);
+            z-index: 1200;
+        }
+
+        .invoice-preview-modal.active {
+            display: flex;
+        }
+
+        .invoice-preview-dialog {
+            width: min(960px, 100%);
+            max-height: min(90vh, 960px);
+            display: grid;
+            grid-template-rows: auto minmax(0, 1fr) auto;
+            overflow: hidden;
+            border-radius: 28px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-soft);
+            box-shadow: 0 32px 90px rgba(7, 16, 28, 0.24);
+        }
+
+        .invoice-preview-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border-soft);
+        }
+
+        .invoice-preview-header h3 {
+            margin: 0;
+            font-size: 1.15rem;
+        }
+
+        .invoice-preview-body {
+            overflow: auto;
+            padding: 1.25rem;
+            background: linear-gradient(180deg, rgba(13, 28, 47, 0.03), transparent 30%);
+        }
+
+        .invoice-render-area {
+            min-height: 240px;
+            padding: 1rem;
+            border-radius: 22px;
+            background: #ffffff;
+            border: 1px solid rgba(13, 28, 47, 0.08);
+        }
+
+        .invoice-preview-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            padding: 1.25rem 1.5rem;
+            border-top: 1px solid var(--border-soft);
+            background: var(--bg-surface);
         }
 
         .member-photo-actions {
@@ -3275,7 +3540,7 @@
                         <button type="button" class="report-export-item" data-export="csv">
                             <span class="material-icons-round">table_chart</span> Download as CSV
                         </button>
-                        <button type="button" class="report-export-item" data-export="pdf">
+                        <button type="button" class="report-export-item" id="btn-download-pdf" data-export="pdf">
                             <span class="material-icons-round">picture_as_pdf</span> Download as PDF
                         </button>
                     </div>
@@ -3450,10 +3715,7 @@
         <section id="equipment-section">
             <div class="page-header">
                 <h1 class="display-text">Fleet Registry</h1>
-                <button class="btn-primary" onclick="UIComponents.openPackageForm((data) => {
-                    const pkg = StateManager.Packages.create(data);
-                    UIComponents.showToast('Equipment asset added!', 'success', 'Asset Created');
-                })">
+                <button class="btn-primary" id="btn-add-asset" onclick="openEquipmentForm()">
                     <span class="material-icons-round">add_circle</span> Add Asset
                 </button>
             </div>
@@ -3742,7 +4004,7 @@
         </div>
         <div class="modal-footer drawer-footer" id="modal-footer">
             <button type="button" class="btn-secondary btn-cancel" id="modal-cancel-btn">Cancel</button>
-            <button type="button" class="btn-primary" id="modal-submit-btn" data-modal-submit="modal-form">Save Record</button>
+            <button type="submit" class="btn-primary" id="modal-submit-btn" form="modal-form">Save Record</button>
         </div>
     </div>
 
@@ -3769,6 +4031,10 @@
                     <div class="form-group">
                         <label class="form-label" for="package-price">Base Price (₹)</label>
                         <input type="number" id="package-price" name="basePrice" class="form-input" min="0" step="1" placeholder="e.g. 2500" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="package-description">Package Description (What's included?)</label>
+                        <textarea id="package-description" name="description" rows="3" class="form-input" placeholder="- Access to cardio &amp; weights&#10;- Free locker facility&#10;- 1 PT session"></textarea>
                     </div>
                 </form>
             </div>
@@ -3853,6 +4119,22 @@
             <button type="button" class="premium-close-btn" id="details-drawer-close" aria-label="Close">&times;</button>
         </div>
         <div class="details-drawer-body" id="details-drawer-body"></div>
+    </div>
+
+    <div id="invoice-preview-modal" class="invoice-preview-modal" aria-hidden="true" data-close-target="invoice-preview-modal">
+        <div class="invoice-preview-dialog modal-container" data-modal-root="invoice-preview-modal" role="dialog" aria-modal="true" aria-labelledby="invoice-preview-title">
+            <div class="invoice-preview-header">
+                <h3 id="invoice-preview-title">Invoice Preview</h3>
+                <button type="button" class="premium-close-btn" aria-label="Close">&times;</button>
+            </div>
+            <div class="invoice-preview-body">
+                <div class="invoice-render-area" id="invoice-render-area"></div>
+            </div>
+            <div class="invoice-preview-footer">
+                <button type="button" class="btn-secondary" id="btn-edit-invoice">Edit Invoice</button>
+                <button type="button" class="btn-primary" id="btn-download-whatsapp">Download & WhatsApp Invoice</button>
+            </div>
+        </div>
     </div>
 
     <!-- TOAST NOTIFICATION CONTAINER -->
@@ -4339,7 +4621,7 @@
                 memberId: member.memberId || normalizedScan,
                 memberName: fullName,
                 timestamp,
-                membershipState: isActive ? 'active' : 'expired'
+                membershipState: isActive ? 'active' : 'inactive'
             });
 
             attendanceBeep.currentTime = 0;
@@ -4350,7 +4632,7 @@
                     <strong>${escapeHtml(fullName)}</strong>
                     <div style="margin-top:0.4rem; color: var(--on-surface-variant);">${escapeHtml(member.memberId || normalizedScan)} • ${new Date(timestamp).toLocaleString('en-IN')}</div>
                     <div style="margin-top:0.6rem; font-weight:700; color:${isActive ? 'var(--success)' : 'var(--error)'};">
-                        ${isActive ? 'Plan active' : 'Membership expired'}
+                        ${isActive ? 'Plan active' : 'Membership inactive'}
                     </div>
                 `;
             }
@@ -4361,8 +4643,8 @@
                 showScannerToast(`Welcome, ${fullName}! Plan active.`, 'success');
                 UIComponents?.showToast(`Welcome, ${fullName}! Plan active.`, 'success', 'Attendance Logged');
             } else {
-                showScannerToast('Alert: Membership Expired!', 'error');
-                UIComponents?.showToast(`Alert: Membership expired for ${fullName}.`, 'error', 'Expired Plan');
+                showScannerToast('Alert: Membership inactive!', 'error');
+                UIComponents?.showToast(`Alert: Membership inactive for ${fullName}.`, 'error', 'inactive Plan');
             }
         }
 
@@ -4460,24 +4742,19 @@
                 return;
             }
 
-            const options = {
-                margin: [10, 10, 12, 10],
-                filename,
+            const memberId = String(filename || 'invoice.pdf').replace(/\.pdf$/i, '');
+            const opt = {
+                margin: [10, 10, 10, 10],
+                filename: `Invoice_${memberId}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: {
                     scale: 2,
                     useCORS: true,
-                    backgroundColor: '#ffffff',
-                    scrollY: 0
+                    allowTaint: true,
+                    letterRendering: true
                 },
-                jsPDF: {
-                    unit: 'mm',
-                    format: 'a4',
-                    orientation: 'portrait'
-                },
-                pagebreak: {
-                    mode: ['avoid-all', 'css', 'legacy']
-                }
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
             };
 
             try {
@@ -4486,7 +4763,7 @@
                         setTimeout(resolve, 0);
                     });
                 });
-                await html2pdf().set(options).from(invoiceElement).save();
+                await html2pdf().set(opt).from(invoiceElement).save();
                 UIComponents?.showToast('Invoice PDF downloaded successfully.', 'success', 'PDF Ready');
             } catch (error) {
                 console.error('[InvoicePDF] Download failed', error);
@@ -4905,6 +5182,85 @@
             return true;
         }
 
+        async function exportToPDF() {
+            console.log('Starting PDF generation...');
+            let pdfWrapper = null;
+
+            try {
+                if (typeof html2pdf === 'undefined') {
+                    throw new Error('html2pdf.js is not loaded.');
+                }
+
+                const dashboardSection = document.getElementById('dashboard-section');
+                if (!dashboardSection) {
+                    throw new Error('Dashboard section not found.');
+                }
+
+                const reportDropdown = document.getElementById('report-export-dropdown');
+                reportDropdown?.classList.remove('active');
+
+                await new Promise((resolve) => {
+                    requestAnimationFrame(() => {
+                        setTimeout(resolve, 100);
+                    });
+                });
+
+                const clone = dashboardSection.cloneNode(true);
+                clone.style.background = '#ffffff';
+                clone.style.color = '#111111';
+                clone.style.width = `${Math.max(dashboardSection.scrollWidth, dashboardSection.offsetWidth, 1200)}px`;
+                clone.style.maxWidth = 'none';
+                clone.style.padding = '24px';
+                clone.style.margin = '0';
+
+                pdfWrapper = document.createElement('div');
+                pdfWrapper.style.position = 'fixed';
+                pdfWrapper.style.left = '-10000px';
+                pdfWrapper.style.top = '0';
+                pdfWrapper.style.width = clone.style.width;
+                pdfWrapper.style.background = '#ffffff';
+                pdfWrapper.style.zIndex = '-1';
+                pdfWrapper.appendChild(clone);
+                document.body.appendChild(pdfWrapper);
+
+                const options = {
+                    margin: [8, 8, 10, 8],
+                    filename: `dashboard-report-${getTodayIsoDate()}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: {
+                        scale: 2,
+                        useCORS: true,
+                        backgroundColor: '#ffffff',
+                        scrollX: 0,
+                        scrollY: 0,
+                        windowWidth: clone.scrollWidth,
+                        windowHeight: clone.scrollHeight
+                    },
+                    jsPDF: {
+                        unit: 'mm',
+                        format: 'a4',
+                        orientation: 'landscape'
+                    },
+                    pagebreak: {
+                        mode: ['css', 'legacy']
+                    }
+                };
+
+                await html2pdf().set(options).from(clone).save();
+
+                UIComponents?.showToast('Dashboard PDF downloaded.', 'success', 'PDF Ready');
+                return true;
+            } catch (error) {
+                console.error('[Report] PDF export failed', error);
+                UIComponents?.showToast('PDF generation failed.', 'error', 'PDF Error');
+                return false;
+            } finally {
+                if (pdfWrapper && pdfWrapper.parentNode) {
+                    pdfWrapper.parentNode.removeChild(pdfWrapper);
+                }
+            }
+        }
+
         function downloadReportCsv(reportType) {
             try {
                 const dataset = getReportDataset(reportType);
@@ -4951,7 +5307,23 @@
         }
 
         window.exportToCSV = exportToCSV;
+        window.exportToPDF = exportToPDF;
         window.downloadReportCsv = downloadReportCsv;
+
+        function openEquipmentForm() {
+            UIComponents.openEquipmentForm((data) => {
+                const equipmentRecords = JSON.parse(localStorage.getItem('ka_equipment') || '[]');
+                equipmentRecords.push({
+                    id: `asset-${Date.now()}`,
+                    ...data,
+                    createdAt: new Date().toISOString()
+                });
+                localStorage.setItem('ka_equipment', JSON.stringify(equipmentRecords));
+                UIComponents.showToast('Equipment asset added!', 'success', 'Asset Created');
+            });
+        }
+
+        window.openEquipmentForm = openEquipmentForm;
 
         // ============ INITIALIZATION & DEMO ============
         window.addEventListener('DOMContentLoaded', async () => {
@@ -5143,42 +5515,6 @@
                         }
                     }
 
-                    if (exportType === 'pdf') {
-                        const btn = item;
-                        const originalLabel = btn.innerHTML;
-                        try {
-                            btn.disabled = true;
-                            btn.innerHTML = '<span class="material-icons-round">hourglass_top</span> Generating...';
-
-                            if (typeof html2pdf === 'undefined') {
-                                UIComponents.showToast('PDF library not loaded.', 'error', 'PDF Error');
-                                return;
-                            }
-
-                            const dashboardSection = document.getElementById('dashboard-section');
-                            if (!dashboardSection) return;
-
-                            await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
-
-                            const options = {
-                                margin: [10, 10, 12, 10],
-                                filename: `dashboard-report-${getTodayIsoDate()}.pdf`,
-                                image: { type: 'jpeg', quality: 0.95 },
-                                html2canvas: { scale: 1.5, useCORS: true, backgroundColor: '#ffffff', scrollY: 0 },
-                                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
-                                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-                            };
-
-                            await html2pdf().set(options).from(dashboardSection).save();
-                            UIComponents.showToast('Dashboard PDF downloaded.', 'success', 'PDF Ready');
-                        } catch (err) {
-                            console.error('[Report] PDF export failed', err);
-                            UIComponents.showToast('PDF generation failed.', 'error', 'PDF Error');
-                        } finally {
-                            btn.disabled = false;
-                            btn.innerHTML = originalLabel;
-                        }
-                    }
                 });
             }
 
@@ -5201,9 +5537,6 @@
                 detailsDrawer?.classList.remove('active');
                 detailsOverlay?.classList.remove('active');
             }
-
-            detailsClose?.addEventListener('click', closeDetailsDrawer);
-            detailsOverlay?.addEventListener('click', closeDetailsDrawer);
 
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape' && detailsDrawer?.classList.contains('active')) {

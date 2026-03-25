@@ -6,11 +6,10 @@
  */
 
 const SettingsModule = (() => {
-    const PACKAGES_STORAGE_KEY = 'packages';
+    const PACKAGES_STORAGE_KEY = 'ka_packages';
     const DEFAULT_PACKAGES = [
-        { id: 1, name: 'Standard', durationMonths: 1, price: 2500 },
-        { id: 2, name: 'Quarterly', durationMonths: 3, price: 7000 },
-        { id: 3, name: 'Annual', durationMonths: 12, price: 24000 }
+        { id: 'basic-3m', name: 'Basic 3 Months', durationMonths: 3, price: 3000 },
+        { id: 'premium-6m', name: 'Premium 6 Months', durationMonths: 6, price: 5400 }
     ];
 
     let currentTab = 'company';
@@ -25,7 +24,9 @@ const SettingsModule = (() => {
         .replace(/'/g, '&#39;');
 
     const initializePackagesState = () => {
-        const storedPackages = JSON.parse(localStorage.getItem(PACKAGES_STORAGE_KEY)) || [];
+        const storedPackages = typeof StateManager !== 'undefined' && StateManager.Packages
+            ? StateManager.Packages.getAll()
+            : JSON.parse(localStorage.getItem(PACKAGES_STORAGE_KEY)) || [];
         packages = Array.isArray(storedPackages) ? storedPackages : [];
 
         if (packages.length === 0) {
@@ -49,15 +50,17 @@ const SettingsModule = (() => {
         const nameInput = document.getElementById('package-name');
         const durationInput = document.getElementById('package-duration');
         const priceInput = document.getElementById('package-price');
+        const descriptionInput = document.getElementById('package-description');
 
-        if (!modal || !title || !hiddenId || !nameInput || !durationInput || !priceInput) return;
+        if (!modal || !title || !hiddenId || !nameInput || !durationInput || !priceInput || !descriptionInput) return;
 
         const selectedPackage = packageId ? getPackageById(packageId) : null;
         title.textContent = selectedPackage ? 'Edit Package' : 'Add Package';
         hiddenId.value = selectedPackage?.id || '';
         nameInput.value = selectedPackage?.name || '';
         durationInput.value = selectedPackage?.durationMonths || '';
-        priceInput.value = selectedPackage?.price || '';
+        priceInput.value = selectedPackage?.price ?? selectedPackage?.basePrice ?? '';
+        descriptionInput.value = selectedPackage?.description || '';
 
         modal.classList.add('active');
         modal.setAttribute('aria-hidden', 'false');
@@ -140,12 +143,14 @@ const SettingsModule = (() => {
             const nameInput = document.getElementById('package-name');
             const durationInput = document.getElementById('package-duration');
             const priceInput = document.getElementById('package-price');
+            const descriptionInput = document.getElementById('package-description');
 
-            if (!hiddenId || !nameInput || !durationInput || !priceInput) return;
+            if (!hiddenId || !nameInput || !durationInput || !priceInput || !descriptionInput) return;
 
             const name = nameInput.value.trim();
             const durationMonths = Number(durationInput.value);
             const price = Number(priceInput.value);
+            const description = descriptionInput.value.trim();
             const existingId = hiddenId.value.trim();
 
             if (!name || durationMonths <= 0 || price < 0) {
@@ -167,7 +172,7 @@ const SettingsModule = (() => {
             if (existingId) {
                 packages = packages.map((pkg) => (
                     String(pkg.id) === String(existingId)
-                        ? { ...pkg, name, durationMonths, price }
+                        ? { ...pkg, name, durationMonths, price, description }
                         : pkg
                 ));
             } else {
@@ -175,7 +180,8 @@ const SettingsModule = (() => {
                     id: Date.now(),
                     name,
                     durationMonths,
-                    price
+                    price,
+                    description
                 });
             }
 
@@ -297,9 +303,24 @@ const SettingsModule = (() => {
                         </div>
 
                         <div class="form-group">
+                            <label for="company-signature-url">Digital Signature Image URL</label>
+                            <input type="url" id="company-signature-url" name="signatureUrl" value="${escapeHtml(profile.signatureUrl || '')}" placeholder="Signature image URL (optional)" class="form-input">
+                            <small style="color: var(--on-surface-variant);">Full URL to the signature image used on invoices.</small>
+                        </div>
+
+                        <div class="form-group">
                             <label>Logo Preview</label>
                             <div style="width: 160px; height: 160px; background: rgba(13, 28, 47, 0.05); border-radius: 12px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 2px dashed rgba(13, 28, 47, 0.2);">
                                 <img src="${escapeHtml(profile.logoUrl)}" alt="Logo" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Signature Preview</label>
+                            <div style="width: 220px; height: 100px; background: rgba(13, 28, 47, 0.05); border-radius: 12px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 2px dashed rgba(13, 28, 47, 0.2); padding: 0.75rem;">
+                                ${profile.signatureUrl
+                                    ? `<img src="${escapeHtml(profile.signatureUrl)}" alt="Signature" style="max-width: 100%; max-height: 100%; object-fit: contain;">`
+                                    : '<span style="color: var(--on-surface-variant); font-size: 0.85rem;">No signature added</span>'}
                             </div>
                         </div>
 
@@ -428,6 +449,7 @@ const SettingsModule = (() => {
         const profileData = {
             gymName: formData.get('gymName'),
             logoUrl: formData.get('logoUrl'),
+            signatureUrl: formData.get('signatureUrl'),
             fullAddress: formData.get('fullAddress'),
             phone: formData.get('phone'),
             email: formData.get('email'),
@@ -476,6 +498,11 @@ const SettingsModule = (() => {
                         <p style="margin: 0.25rem 0 0 0; color: var(--on-surface-variant); font-size: 0.85rem;">Phone: ${escapeHtml(profile.phone)} | Email: ${escapeHtml(profile.email)}</p>
                         <p style="margin: 0.25rem 0 0 0; color: var(--on-surface-variant); font-size: 0.85rem;">Tax ID: ${escapeHtml(profile.gstNumber)}</p>
                     </div>
+                    ${profile.signatureUrl ? `
+                        <div style="text-align: right; margin-top: 2rem;">
+                            <img src="${escapeHtml(profile.signatureUrl)}" alt="Digital Signature" style="max-height: 72px; max-width: 220px; object-fit: contain;">
+                        </div>
+                    ` : ''}
                 </div>
                 <p style="text-align: center; margin-top: 1.5rem; color: var(--on-surface-variant); font-size: 0.85rem;">This information will appear on all invoices</p>
             </div>

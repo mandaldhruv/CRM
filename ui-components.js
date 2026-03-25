@@ -207,6 +207,10 @@ const UIComponents = (() => {
             modal.setAttribute('aria-hidden', 'true');
         }
 
+        if (modal.hasAttribute('aria-hidden')) {
+            modal.setAttribute('aria-hidden', 'true');
+        }
+
         document.dispatchEvent(new CustomEvent('app:modal-closed', {
             detail: { modalId: modal.id || '' }
         }));
@@ -215,50 +219,88 @@ const UIComponents = (() => {
     window.closeModal = closeModalById;
 
     document.addEventListener('DOMContentLoaded', () => {
-        document.body.addEventListener('click', (event) => {
-            const closeTrigger = event.target.closest('.premium-close-btn') || event.target.closest('.btn-cancel');
-            if (closeTrigger) {
-                event.preventDefault();
-                const container = closeTrigger.closest('.modal-container, .drawer-container');
+        document.body.addEventListener('click', async (e) => {
+            if (e.target.closest('.premium-close-btn') || e.target.closest('.btn-cancel')) {
+                e.preventDefault();
+                console.log('Close/Cancel clicked!');
+
+                const container = e.target.closest('.modal-container, .drawer-container, .modal, .drawer-content, .details-drawer');
+                const overlay = e.target.closest('.payroll-modal-overlay, .modal-overlay, .package-modal, .details-drawer-overlay, .invoice-preview-modal');
+
                 if (container) {
-                    closeModalById(container);
-                }
-                return;
-            }
+                    const modalRootId = container.dataset?.modalRoot || container.id;
+                    if (modalRootId && typeof window.closeModal === 'function') {
+                        window.closeModal(modalRootId);
+                    } else {
+                        container.classList.remove('active');
+                        container.style.display = 'none';
+                        const form = container.querySelector('form');
+                        if (form) form.reset();
+                    }
 
-            const submitTrigger = event.target.closest('[data-modal-submit]');
-            if (submitTrigger) {
-                event.preventDefault();
-                const formId = submitTrigger.dataset.modalSubmit;
-                const form = formId ? document.getElementById(formId) : document.getElementById('modal-form');
-
-                if (form && typeof form.requestSubmit === 'function') {
-                    form.requestSubmit();
+                    if (container.classList.contains('details-drawer')) {
+                        document.getElementById('details-drawer-overlay')?.classList.remove('active');
+                    }
+                } else if (overlay && overlay.dataset?.closeTarget && typeof window.closeModal === 'function') {
+                    window.closeModal(overlay.dataset.closeTarget);
                 } else {
-                    submitForm();
+                    console.error('Could not find parent modal container to close.');
                 }
+
                 return;
             }
 
-            const overlay = event.target.closest('.modal-overlay, .package-modal, .payroll-modal-overlay');
-            if (!overlay || overlay !== event.target) {
+            if (e.target.closest('#btn-download-pdf')) {
+                e.preventDefault();
+                console.log('PDF Download clicked!');
+                await window.exportToPDF?.();
+                return;
+            }
+
+            const birthdayWishTrigger = e.target.closest('[data-action="wish-birthday"]');
+            if (birthdayWishTrigger) {
+                e.preventDefault();
+                const phone = String(birthdayWishTrigger.dataset.phone || '').replace(/\D/g, '').slice(-10);
+                const name = String(birthdayWishTrigger.dataset.name || 'there').trim() || 'there';
+
+                if (!phone) {
+                    console.error('Birthday wish action is missing a valid phone number.');
+                    return;
+                }
+
+                const message = encodeURIComponent(`Happy Birthday ${name}! 🎉 Wishing you a fantastic day and a great year of fitness ahead from all of us at the Gym!`);
+                window.open(`https://wa.me/91${phone}?text=${message}`, '_blank');
+                return;
+            }
+
+            const overlay = e.target.closest('.modal-overlay, .package-modal, .payroll-modal-overlay, .details-drawer-overlay, .invoice-preview-modal');
+            if (!overlay || overlay !== e.target) {
+                return;
+            }
+
+            if (overlay.id === 'details-drawer-overlay') {
+                document.getElementById('details-drawer')?.classList.remove('active');
+                overlay.classList.remove('active');
                 return;
             }
 
             const modalTarget = overlay.dataset.closeTarget;
-            if (modalTarget) {
-                closeModalById(modalTarget);
+            if (modalTarget && typeof window.closeModal === 'function') {
+                window.closeModal(modalTarget);
             }
         });
 
-        document.body.addEventListener('submit', (event) => {
-            const modalForm = event.target.closest('#modal-form');
-            if (!modalForm) {
+        document.body.addEventListener('submit', (e) => {
+            if (e.target.tagName !== 'FORM') {
                 return;
             }
 
-            event.preventDefault();
-            submitForm();
+            console.log('Form submitted:', e.target.id);
+
+            if (e.target.id === 'modal-form') {
+                e.preventDefault();
+                submitForm();
+            }
         });
     }, { once: true });
 
@@ -278,7 +320,7 @@ const UIComponents = (() => {
             DOM.footer().innerHTML = `
                 <button type="button" class="btn-secondary btn-cancel" id="modal-cancel-btn">Cancel</button>
                 ${actionButtons.map((btn, idx) => `
-                    <button type="button" class="btn-${btn.type || 'secondary'}" id="${btn.id || `modal-btn-${idx}`}" ${btn.form ? `data-modal-submit="${btn.form}"` : ''}>
+                    <button type="${btn.form ? 'submit' : 'button'}" class="btn-${btn.type || 'secondary'}" id="${btn.id || `modal-btn-${idx}`}" ${btn.form ? `form="${btn.form}"` : ''}>
                         ${btn.label}
                     </button>
                 `).join('')}
@@ -288,7 +330,7 @@ const UIComponents = (() => {
             DOM.body().innerHTML = renderForm(formConfig);
             DOM.footer().innerHTML = `
                 <button type="button" class="btn-secondary btn-cancel" id="modal-cancel-btn">Cancel</button>
-                <button type="button" class="btn-primary" id="modal-submit-btn" data-modal-submit="modal-form">Save Record</button>
+                <button type="submit" class="btn-primary" id="modal-submit-btn" form="modal-form">Save Record</button>
             `;
         }
 
@@ -564,6 +606,32 @@ const UIComponents = (() => {
     /**
      * Receipt form configuration
      */
+    const equipmentFormConfig = {
+        fields: [
+            { name: 'assetName', label: 'Asset Name', type: 'text', required: true, placeholder: 'e.g., Assault Bike' },
+            { name: 'serialNumber', label: 'Serial Number', type: 'text', required: true, placeholder: 'e.g., AB-1009' },
+            { name: 'category', label: 'Category', type: 'select', required: true,
+                options: [
+                    { value: 'cardio', label: 'Cardio' },
+                    { value: 'strength', label: 'Strength' },
+                    { value: 'free-weights', label: 'Free Weights' }
+                ]
+            },
+            { name: 'status', label: 'Status', type: 'select', required: true,
+                options: [
+                    { value: 'active', label: 'Active' },
+                    { value: 'maintenance', label: 'Maintenance' },
+                    { value: 'broken', label: 'Broken' }
+                ]
+            },
+            { name: 'purchaseDate', label: 'Purchase Date', type: 'date', required: true },
+            { name: 'price', label: 'Price (â‚¹)', type: 'number', required: true, placeholder: '0' }
+        ]
+    };
+
+    /**
+     * Receipt form configuration
+     */
     const receiptFormConfig = {
         fields: [
             { name: 'memberId', label: 'Member ID', type: 'text', required: true, placeholder: 'Member ID' },
@@ -617,6 +685,10 @@ const UIComponents = (() => {
         openModal('Create Package', packageFormConfig, 'packages', onSave);
     };
 
+    const openEquipmentForm = (onSave) => {
+        openModal('Add Equipment Asset', equipmentFormConfig, 'equipment', onSave);
+    };
+
     /**
      * Opens receipt form modal
      */
@@ -640,6 +712,7 @@ const UIComponents = (() => {
         openStaffForm,
         openExpenseForm,
         openPackageForm,
+        openEquipmentForm,
         openReceiptForm,
 
         // Form configs (for custom use)
@@ -648,6 +721,7 @@ const UIComponents = (() => {
         staffFormConfig,
         expenseFormConfig,
         packageFormConfig,
+        equipmentFormConfig,
         receiptFormConfig
     };
 })();

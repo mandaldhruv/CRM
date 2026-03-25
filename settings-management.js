@@ -13,6 +13,7 @@ const SettingsManager = (() => {
         companyProfile: {
             gymName: 'Kinetic Atelier',
             logoUrl: 'https://via.placeholder.com/150?text=Gym+Logo',
+            signatureUrl: '',
             fullAddress: '123 Fitness Street, Gym City, State 12345',
             phone: '+91 9876543210',
             email: 'info@kineticatelier.com',
@@ -111,6 +112,7 @@ const SettingsManager = (() => {
             settings.companyProfile = {
                 gymName: profileData.gymName || settings.companyProfile.gymName,
                 logoUrl: profileData.logoUrl || settings.companyProfile.logoUrl,
+                signatureUrl: profileData.signatureUrl || settings.companyProfile.signatureUrl || '',
                 fullAddress: profileData.fullAddress || settings.companyProfile.fullAddress,
                 phone: profileData.phone || settings.companyProfile.phone,
                 email: profileData.email || settings.companyProfile.email,
