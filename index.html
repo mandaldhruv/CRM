@@ -1958,6 +1958,16 @@
             gap: 0.75rem;
         }
 
+        .finance-click-card {
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+        }
+
+        .finance-click-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 18px 36px rgba(15, 23, 42, 0.14);
+            border-color: color-mix(in srgb, var(--primary) 36%, var(--border-soft) 64%);
+        }
+
         .metric-label {
             font-size: 0.85rem;
             color: var(--on-surface-variant);
@@ -2030,89 +2040,173 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0.75rem;
+            padding: 0.4rem 0.6rem !important;
             background: rgba(13, 28, 47, 0.02);
             border-radius: 8px;
             border-left: 3px solid var(--primary);
+            margin-bottom: 0.4rem;
         }
 
-        .birthday-widget-content {
-            padding-top: 0.35rem;
-        }
-
-        .birthday-list {
-            display: flex;
-            flex-direction: column;
-            gap: 0.85rem;
-            overflow-x: hidden;
-        }
-
-        .birthday-item {
+        .follow-up-actions {
             display: flex;
             align-items: center;
+            gap: 0.55rem;
+            flex: 0 0 auto;
+        }
+
+        #birthdays-card {
+            background: var(--bg-surface);
+            border-radius: 24px;
+        }
+
+        .bday-card-shell {
+            padding: 1.4rem;
+            gap: 1rem;
+        }
+
+        .bday-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .bday-card-header .card-title {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .bday-list-container {
+            display: flex;
+            flex-direction: column;
             gap: 0.9rem;
-            padding: 0.95rem 1rem;
-            border-radius: 18px;
+            max-height: 320px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 0.25rem;
+        }
+
+        .bday-list-item {
+            display: flex;
+            align-items: center;
+            gap: 0.95rem;
+            padding: 1rem;
             background: var(--bg-surface);
             border: 1px solid var(--border-soft);
+            border-radius: 20px;
             box-shadow: var(--shadow-soft);
         }
 
-        .birthday-avatar {
-            width: 46px;
-            height: 46px;
-            border-radius: 999px;
+        .bday-list-item.compact-item {
+            display: flex;
+            align-items: center;
+            padding: 0.4rem 0.6rem;
+            background: var(--bg-soft, rgba(13, 28, 47, 0.02));
+            border-radius: 8px;
+            border: 1px solid var(--border-soft);
+            box-shadow: none;
+        }
+
+        .bday-avatar-circle {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
             flex: 0 0 auto;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            background: color-mix(in srgb, var(--brand-primary, var(--primary)) 22%, var(--bg-surface) 78%);
-            color: var(--text-primary);
-        }
-
-        .birthday-content {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .birthday-content h4 {
-            margin: 0;
-            font-size: 0.98rem;
-            color: var(--text-primary);
-        }
-
-        .birthday-content p {
-            margin: 0.2rem 0 0 0;
-            font-size: 0.87rem;
-            color: var(--text-secondary);
-        }
-
-        .birthday-item .btn-icon {
-            min-width: 126px;
-            height: 42px;
-            padding: 0 0.95rem;
-            border-radius: 12px;
-            border: 1px solid var(--border-soft);
-            background: #25D366;
             color: #ffffff;
+            font-size: 0.95rem;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+        }
+
+        .bday-avatar-circle.compact-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.8rem;
+            margin-right: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        .bday-details {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.22rem;
+            justify-content: center;
+            line-height: 1.2;
+        }
+
+        .bday-name {
+            color: var(--text-primary);
+            font-size: 0.98rem;
+            font-weight: 700;
+        }
+
+        .bday-subtext {
+            color: var(--text-secondary);
+            font-size: 0.86rem;
+        }
+
+        .bday-wish-btn {
+            margin-left: auto;
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            border: 1px solid color-mix(in srgb, #25D366 28%, var(--border-soft) 72%);
+            background: color-mix(in srgb, #25D366 14%, var(--bg-surface) 86%);
+            color: #25D366;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 0.45rem;
             cursor: pointer;
-            font-weight: 700;
-            transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
-            box-shadow: 0 10px 22px rgba(37, 211, 102, 0.24);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+            box-shadow: 0 10px 18px rgba(37, 211, 102, 0.16);
         }
 
-        .birthday-item .btn-icon:hover {
+        .bday-wish-btn:hover {
             transform: translateY(-1px);
-            background: #1fb95a;
-            box-shadow: 0 12px 24px rgba(37, 211, 102, 0.32);
+            background: color-mix(in srgb, #25D366 22%, var(--bg-surface) 78%);
+            box-shadow: 0 12px 20px rgba(37, 211, 102, 0.22);
         }
 
-        .birthday-wish-btn {
-            animation: birthdayPulse 1.8s ease-in-out infinite;
+        .bday-wish-btn.btn-pill {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background-color: #25D366;
+            color: white !important;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s ease;
+            width: auto;
+            height: auto;
+            box-shadow: none;
+        }
+
+        .bday-wish-btn.btn-pill:active {
+            transform: scale(0.95);
+        }
+
+        .dashboard-card-title,
+        .bday-card-header h3 {
+            font-size: 1.15rem !important;
+            font-weight: 700 !important;
         }
 
         @keyframes birthdayPulse {
@@ -2264,147 +2358,6 @@
             }
             .btn-print {
                 display: none;
-            }
-        }
-
-        .scanner-shell {
-            display: grid;
-            grid-template-columns: minmax(360px, 1.1fr) minmax(280px, 0.9fr);
-            gap: 1.5rem;
-            align-items: start;
-        }
-
-        .scanner-reader {
-            min-height: 360px;
-            border-radius: 28px;
-            overflow: hidden;
-            background: var(--surface-container-low);
-            border: 1px solid rgba(13, 28, 47, 0.08);
-        }
-
-        .scanner-reader > div {
-            border-radius: 28px;
-        }
-
-        .scanner-controls {
-            display: flex;
-            gap: 0.85rem;
-            flex-wrap: wrap;
-            margin-top: 1.25rem;
-        }
-
-        .scanner-meta {
-            display: grid;
-            gap: 1rem;
-        }
-
-        .scanner-panel {
-            padding: 1.5rem;
-            border-radius: 24px;
-            background: white;
-            box-shadow: 0 8px 24px rgba(13, 28, 47, 0.06);
-        }
-
-        .scanner-panel h3 {
-            margin-bottom: 0.5rem;
-        }
-
-        .scanner-status-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.55rem 0.9rem;
-            border-radius: 999px;
-            background: rgba(53, 37, 205, 0.1);
-            color: var(--primary);
-            font-weight: 700;
-            font-size: 0.82rem;
-            letter-spacing: 0.02em;
-        }
-
-        .scanner-activity-list {
-            display: grid;
-            gap: 0.85rem;
-            margin-top: 1rem;
-        }
-
-        .scanner-activity-item {
-            display: flex;
-            justify-content: space-between;
-            gap: 1rem;
-            padding: 0.95rem 1rem;
-            border-radius: 18px;
-            background: var(--surface-container-low);
-        }
-
-        .scanner-activity-item strong {
-            display: block;
-            margin-bottom: 0.18rem;
-        }
-
-        .scanner-empty {
-            padding: 1rem;
-            border-radius: 18px;
-            background: var(--surface-container-low);
-            color: var(--on-surface-variant);
-        }
-
-        .scanner-toast-banner {
-            position: fixed;
-            top: 1.5rem;
-            left: 50%;
-            transform: translate(-50%, -120%);
-            min-width: min(680px, calc(100vw - 2rem));
-            padding: 1.4rem 1.8rem;
-            border-radius: 24px;
-            box-shadow: 0 24px 60px rgba(13, 28, 47, 0.22);
-            z-index: 2400;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            font-size: 1.15rem;
-            font-weight: 800;
-            opacity: 0;
-            pointer-events: none;
-            transition: transform 0.35s ease, opacity 0.35s ease;
-        }
-
-        .scanner-toast-banner.active {
-            transform: translate(-50%, 0);
-            opacity: 1;
-        }
-
-        .scanner-toast-banner.success {
-            background: #d8f4df;
-            color: #1f5b30;
-        }
-
-        .scanner-toast-banner.error {
-            background: #f4d7d6;
-            color: #7a2724;
-        }
-
-        body.dark-theme .scanner-reader,
-        body.dark-theme .scanner-panel,
-        body.dark-theme .scanner-activity-item,
-        body.dark-theme .scanner-empty {
-            background: #1a1f1c;
-            border-color: rgba(255, 255, 255, 0.08);
-        }
-
-        body.dark-theme .scanner-toast-banner.success {
-            background: #274033;
-            color: #d7f0de;
-        }
-
-        body.dark-theme .scanner-toast-banner.error {
-            background: #4a3231;
-            color: #f3d9d8;
-        }
-
-        @media (max-width: 960px) {
-            .scanner-shell {
-                grid-template-columns: 1fr;
             }
         }
 
@@ -2608,7 +2561,6 @@
         .command-palette,
         .kanban-column,
         .pipeline-col,
-        .scanner-panel,
         .report-card,
         .invoice-container {
             background: var(--bg-surface);
@@ -2830,7 +2782,6 @@
         .toast-message,
         .command-empty,
         .report-card p,
-        .scanner-empty,
         .kanban-count,
         .invoice-number p {
             color: var(--text-secondary);
@@ -2851,7 +2802,6 @@
             color: var(--brand-primary);
         }
 
-        .scanner-status-pill,
         .command-result-type {
             background: color-mix(in srgb, var(--brand-secondary) 16%, transparent);
             color: var(--brand-secondary);
@@ -3482,10 +3432,6 @@
                 <span class="material-icons-round">group</span>
                 <span>Members</span>
             </div>
-            <div class="nav-item" data-section="attendance" onclick="showSection('attendance')">
-                <span class="material-icons-round">qr_code_scanner</span>
-                <span>Attendance</span>
-            </div>
             <div class="nav-item" data-section="equipment" onclick="showSection('equipment')">
                 <span class="material-icons-round">fitness_center</span>
                 <span>Equipment</span>
@@ -3553,7 +3499,7 @@
             <!-- Follow-up Widgets Row -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 2rem; margin-bottom: 2rem;">
                 <!-- Today's Birthdays Widget -->
-                <div class="card follow-up-widget" data-widget="birthdays"></div>
+            <div class="card follow-up-widget" data-widget="birthdays" id="birthdays-card"></div>
                 
                 <!-- Renewal Follow-ups Widget -->
                 <div class="card follow-up-widget" data-widget="renewals"></div>
@@ -3574,7 +3520,7 @@
                         </button>
                     </div>
                 </div>
-                <table class="data-table">
+                <table class="data-table" id="recent-activity-table">
                     <thead>
                         <tr>
                             <th>User</th>
@@ -3661,53 +3607,6 @@
                     <span class="material-icons-round empty-icon">people_outline</span>
                     <p>No members found</p>
                     <button class="btn-secondary" type="button" id="empty-members-open-btn">Add Your First Member</button>
-                </div>
-            </div>
-        </section>
-
-        <section id="attendance-section">
-            <div class="page-header">
-                <div>
-                    <h1 class="display-text">QR Attendance</h1>
-                    <p class="section-subtitle">Scan member QR codes, validate membership, and log attendance in IndexedDB.</p>
-                </div>
-            </div>
-
-            <div class="scanner-shell">
-                <div class="card">
-                    <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:1rem;">
-                        <div>
-                            <h3>Scanner Module</h3>
-                            <p style="color: var(--on-surface-variant); margin-top: 0.35rem;">Use the front desk camera to read each member's QR code.</p>
-                        </div>
-                        <span id="attendance-scanner-status" class="scanner-status-pill">
-                            <span class="material-icons-round">camera_alt</span>
-                            Camera idle
-                        </span>
-                    </div>
-                    <div id="attendance-reader" class="scanner-reader"></div>
-                    <div class="scanner-controls">
-                        <button type="button" id="attendance-start-btn" class="btn-primary">
-                            <span class="material-icons-round">play_circle</span> Start Camera
-                        </button>
-                        <button type="button" id="attendance-stop-btn" class="btn-secondary">
-                            <span class="material-icons-round">stop_circle</span> Stop Camera
-                        </button>
-                    </div>
-                </div>
-
-                <div class="scanner-meta">
-                    <div class="scanner-panel">
-                        <h3>Last Scan Result</h3>
-                        <div id="attendance-last-scan" class="scanner-empty">No member scanned yet.</div>
-                    </div>
-
-                    <div class="scanner-panel">
-                        <h3>Today's Check-Ins</h3>
-                        <div id="attendance-log-list" class="scanner-activity-list">
-                            <div class="scanner-empty">Attendance entries will appear here after each successful scan.</div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </section>
@@ -3989,9 +3888,6 @@
         </section>
 
     </main>
-
-    <div id="scanner-toast-banner" class="scanner-toast-banner" aria-live="assertive"></div>
-
     <!-- MODAL/DRAWER SYSTEM -->
     <div id="modal-overlay" class="modal-overlay" data-close-target="modal-drawer"></div>
     <div id="modal-drawer" class="modal-drawer drawer-container" data-modal-root="modal-drawer">
@@ -4217,10 +4113,6 @@
          * Handles dynamic section switching and active state management
          */
         function showSection(sectionId) {
-            if (sectionId !== 'attendance') {
-                stopAttendanceScanner();
-            }
-
             // 1. Hide all sections
             const sections = document.querySelectorAll('section');
             sections.forEach(section => {
@@ -4240,10 +4132,6 @@
                 // Special handling for members section - render members table
                 if (sectionId === 'members' && typeof MemberModule !== 'undefined') {
                     MemberModule.renderMembersTable();
-                }
-
-                if (sectionId === 'attendance') {
-                    renderAttendanceActivity();
                 }
 
                 if (sectionId === 'hr-payroll') {
@@ -4403,304 +4291,6 @@
             input.value = '';
         }
 
-        let attendanceScannerInstance = null;
-        let attendanceScannerRunning = false;
-        let lastAttendanceScan = { value: '', timestamp: 0 };
-        let scannerToastTimeout = null;
-
-        function createBeepAudio() {
-            const sampleRate = 22050;
-            const durationSeconds = 0.16;
-            const frameCount = Math.floor(sampleRate * durationSeconds);
-            const audioBuffer = new ArrayBuffer(44 + frameCount * 2);
-            const view = new DataView(audioBuffer);
-            const writeText = (offset, text) => {
-                for (let index = 0; index < text.length; index += 1) {
-                    view.setUint8(offset + index, text.charCodeAt(index));
-                }
-            };
-
-            writeText(0, 'RIFF');
-            view.setUint32(4, 36 + frameCount * 2, true);
-            writeText(8, 'WAVE');
-            writeText(12, 'fmt ');
-            view.setUint32(16, 16, true);
-            view.setUint16(20, 1, true);
-            view.setUint16(22, 1, true);
-            view.setUint32(24, sampleRate, true);
-            view.setUint32(28, sampleRate * 2, true);
-            view.setUint16(32, 2, true);
-            view.setUint16(34, 16, true);
-            writeText(36, 'data');
-            view.setUint32(40, frameCount * 2, true);
-
-            for (let index = 0; index < frameCount; index += 1) {
-                const envelope = 1 - (index / frameCount);
-                const sample = Math.sin((2 * Math.PI * 880 * index) / sampleRate) * 0.35 * envelope;
-                view.setInt16(44 + (index * 2), sample * 32767, true);
-            }
-
-            const audioBlob = new Blob([audioBuffer], { type: 'audio/wav' });
-            return new Audio(URL.createObjectURL(audioBlob));
-        }
-
-        const attendanceBeep = createBeepAudio();
-
-        function updateAttendanceScannerStatus(label, icon = 'camera_alt') {
-            const statusPill = document.getElementById('attendance-scanner-status');
-            if (!statusPill) {
-                return;
-            }
-
-            statusPill.innerHTML = `<span class="material-icons-round">${escapeHtml(icon)}</span>${escapeHtml(label)}`;
-        }
-
-        function showScannerToast(message, type = 'success') {
-            const toastBanner = document.getElementById('scanner-toast-banner');
-            if (!toastBanner) {
-                return;
-            }
-
-            toastBanner.className = `scanner-toast-banner ${type}`;
-            toastBanner.textContent = message;
-            toastBanner.classList.add('active');
-
-            clearTimeout(scannerToastTimeout);
-            scannerToastTimeout = setTimeout(() => {
-                toastBanner.classList.remove('active');
-            }, 2800);
-        }
-
-        function normalizeMemberStatus(member) {
-            const endDate = member?.endDate ? new Date(member.endDate) : null;
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
-            if (String(member?.status || '').toLowerCase() === 'inactive') {
-                return false;
-            }
-
-            if (!endDate || Number.isNaN(endDate.getTime())) {
-                return true;
-            }
-
-            endDate.setHours(0, 0, 0, 0);
-            return endDate >= today;
-        }
-
-        async function hydrateIndexedMemberMirror() {
-            if (!window.AsyncStateManager?.Members?.upsert || !window.AsyncStateManager?.Members?.getAll) {
-                return;
-            }
-
-            const indexedMembers = await AsyncStateManager.Members.getAll();
-            if (indexedMembers.length > 0) {
-                return;
-            }
-
-            const existingMembers = getCollectionFromStorage(['members', 'ka_members'], () => StateManager?.Members?.getAll?.());
-            await Promise.all(existingMembers.map(member => {
-                if (!member?.id) {
-                    return Promise.resolve();
-                }
-
-                return AsyncStateManager.Members.upsert({
-                    ...member,
-                    memberId: member.memberId || member.id
-                });
-            }));
-        }
-
-        async function getIndexedMembers() {
-            if (window.AsyncStateManager?.Members?.getAll) {
-                const indexedMembers = await AsyncStateManager.Members.getAll();
-                if (indexedMembers.length > 0) {
-                    return indexedMembers;
-                }
-            }
-
-            return getCollectionFromStorage(['members', 'ka_members'], () => StateManager?.Members?.getAll?.());
-        }
-
-        async function findMemberByQrValue(memberId) {
-            const normalizedId = String(memberId || '').trim();
-            if (!normalizedId) {
-                return null;
-            }
-
-            const members = await getIndexedMembers();
-            return members.find(member => String(member.memberId || member.id || '').trim() === normalizedId) || null;
-        }
-
-        async function saveAttendanceLog(record) {
-            if (window.AsyncStateManager?.Attendance?.create) {
-                return AsyncStateManager.Attendance.create(record);
-            }
-
-            const fallbackRecords = getStoredCollection(['ka_attendance']);
-            fallbackRecords.push({
-                id: `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-                ...record
-            });
-            localStorage.setItem('ka_attendance', JSON.stringify(fallbackRecords));
-            return record;
-        }
-
-        async function getAttendanceLogs() {
-            if (window.AsyncStateManager?.Attendance?.getAll) {
-                return AsyncStateManager.Attendance.getAll();
-            }
-
-            return getStoredCollection(['ka_attendance']);
-        }
-
-        async function renderAttendanceActivity() {
-            const activityList = document.getElementById('attendance-log-list');
-            if (!activityList) {
-                return;
-            }
-
-            const logs = await getAttendanceLogs();
-            const today = getTodayIsoDate();
-            const todaysLogs = logs
-                .filter(log => String(log.timestamp || '').startsWith(today))
-                .sort((left, right) => new Date(right.timestamp) - new Date(left.timestamp))
-                .slice(0, 8);
-
-            if (todaysLogs.length === 0) {
-                activityList.innerHTML = '<div class="scanner-empty">Attendance entries will appear here after each successful scan.</div>';
-                return;
-            }
-
-            activityList.innerHTML = todaysLogs.map(log => `
-                <div class="scanner-activity-item">
-                    <div>
-                        <strong>${escapeHtml(log.memberName || 'Unnamed Member')}</strong>
-                        <div style="color: var(--on-surface-variant); font-size: 0.84rem;">${escapeHtml(log.memberId || 'Unknown ID')}</div>
-                    </div>
-                    <div style="text-align:right;">
-                        <strong>${escapeHtml((log.membershipState || 'active').toUpperCase())}</strong>
-                        <div style="color: var(--on-surface-variant); font-size: 0.84rem;">${new Date(log.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        async function handleAttendanceScan(decodedText) {
-            const now = Date.now();
-            const normalizedScan = String(decodedText || '').trim();
-
-            if (!normalizedScan) {
-                return;
-            }
-
-            if (lastAttendanceScan.value === normalizedScan && (now - lastAttendanceScan.timestamp) < 2500) {
-                return;
-            }
-
-            lastAttendanceScan = { value: normalizedScan, timestamp: now };
-
-            const member = await findMemberByQrValue(normalizedScan);
-            const lastScanCard = document.getElementById('attendance-last-scan');
-
-            if (!member) {
-                if (lastScanCard) {
-                    lastScanCard.innerHTML = `<strong>Unknown QR code</strong><div style="margin-top:0.4rem; color: var(--on-surface-variant);">No member record matched ID ${escapeHtml(normalizedScan)}.</div>`;
-                }
-                showScannerToast('Alert: Member record not found!', 'error');
-                UIComponents?.showToast('No member record matched this QR code.', 'error', 'Scan Failed');
-                return;
-            }
-
-            const fullName = [member.firstName, member.lastName].filter(Boolean).join(' ') || member.name || 'Member';
-            const isActive = normalizeMemberStatus(member);
-            const timestamp = new Date().toISOString();
-
-            await saveAttendanceLog({
-                memberRecordId: member.id || '',
-                memberId: member.memberId || normalizedScan,
-                memberName: fullName,
-                timestamp,
-                membershipState: isActive ? 'active' : 'inactive'
-            });
-
-            attendanceBeep.currentTime = 0;
-            attendanceBeep.play().catch(() => {});
-
-            if (lastScanCard) {
-                lastScanCard.innerHTML = `
-                    <strong>${escapeHtml(fullName)}</strong>
-                    <div style="margin-top:0.4rem; color: var(--on-surface-variant);">${escapeHtml(member.memberId || normalizedScan)} • ${new Date(timestamp).toLocaleString('en-IN')}</div>
-                    <div style="margin-top:0.6rem; font-weight:700; color:${isActive ? 'var(--success)' : 'var(--error)'};">
-                        ${isActive ? 'Plan active' : 'Membership inactive'}
-                    </div>
-                `;
-            }
-
-            await renderAttendanceActivity();
-
-            if (isActive) {
-                showScannerToast(`Welcome, ${fullName}! Plan active.`, 'success');
-                UIComponents?.showToast(`Welcome, ${fullName}! Plan active.`, 'success', 'Attendance Logged');
-            } else {
-                showScannerToast('Alert: Membership inactive!', 'error');
-                UIComponents?.showToast(`Alert: Membership inactive for ${fullName}.`, 'error', 'inactive Plan');
-            }
-        }
-
-        async function startAttendanceScanner() {
-            const readerElement = document.getElementById('attendance-reader');
-            if (!readerElement || typeof Html5Qrcode === 'undefined') {
-                UIComponents?.showToast('QR scanner library is not available.', 'error', 'Scanner Error');
-                return;
-            }
-
-            if (attendanceScannerRunning) {
-                return;
-            }
-
-            attendanceScannerInstance = attendanceScannerInstance || new Html5Qrcode('attendance-reader');
-
-            try {
-                updateAttendanceScannerStatus('Starting camera...', 'autorenew');
-
-                await attendanceScannerInstance.start(
-                    { facingMode: 'environment' },
-                    {
-                        fps: 10,
-                        qrbox: { width: 220, height: 220 },
-                        aspectRatio: 1.2
-                    },
-                    handleAttendanceScan,
-                    () => {}
-                );
-
-                attendanceScannerRunning = true;
-                updateAttendanceScannerStatus('Camera live', 'qr_code_scanner');
-            } catch (error) {
-                console.error('[AttendanceScanner] Unable to start camera', error);
-                updateAttendanceScannerStatus('Camera unavailable', 'error');
-                UIComponents?.showToast('Unable to access the camera for QR scanning.', 'error', 'Camera Error');
-            }
-        }
-
-        async function stopAttendanceScanner() {
-            if (!attendanceScannerInstance || !attendanceScannerRunning) {
-                updateAttendanceScannerStatus('Camera idle', 'camera_alt');
-                return;
-            }
-
-            try {
-                await attendanceScannerInstance.stop();
-                await attendanceScannerInstance.clear();
-            } catch (error) {
-                console.warn('[AttendanceScanner] Scanner stop encountered an issue', error);
-            } finally {
-                attendanceScannerRunning = false;
-                attendanceScannerInstance = null;
-                updateAttendanceScannerStatus('Camera idle', 'camera_alt');
-            }
-        }
 
         const ATTENDANCE_STORAGE_KEY = 'staff_attendance';
         let activePayrollStaff = null;
@@ -5335,12 +4925,9 @@
             const commandPaletteResults = document.getElementById('command-palette-results');
             const payrollModalOverlay = document.getElementById('payroll-modal-overlay');
             const payrollForm = document.getElementById('payroll-form');
-            const attendanceStartButton = document.getElementById('attendance-start-btn');
-            const attendanceStopButton = document.getElementById('attendance-stop-btn');
 
             if (window.AsyncStateManager?.initialize) {
                 await AsyncStateManager.initialize();
-                await hydrateIndexedMemberMirror();
             }
 
             themeToggle?.addEventListener('click', () => {
@@ -5389,13 +4976,6 @@
                 }
             });
 
-            attendanceStartButton?.addEventListener('click', () => {
-                startAttendanceScanner();
-            });
-
-            attendanceStopButton?.addEventListener('click', () => {
-                stopAttendanceScanner();
-            });
 
             document.addEventListener('keydown', (event) => {
                 const isModifierPressed = event.ctrlKey || event.metaKey;
@@ -5437,7 +5017,6 @@
             // Quick Test Commands
             console.log('%c\n⚡ Try these commands in console:', 'color: #ed6c02; font-weight: bold');
             console.log('   StateManager.getStats()                    // View all records\n   StateManager.Members.getAll()            // Get all members\n   MemberModule.renderMembersTable()        // Render members list\n   UIComponents.showToast("Hello!", "success", "Test")  // Test toast\n   StateManager.clearAll()                   // Reset database');
-            renderAttendanceActivity();
 
             // ====== PHASE 2: REPORT EXPORT DROPDOWN ======
             const reportBtn = document.getElementById('dashboard-report-btn');

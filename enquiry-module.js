@@ -162,10 +162,12 @@ const EnquiryModule = (() => {
      * Calculates BMI and returns result with status
      */
     const calculateBMI = () => {
-        const height = parseFloat(document.getElementById('bmi-height').value);
+        const feet = parseFloat(document.getElementById('bmi-feet').value);
+        const inches = parseFloat(document.getElementById('bmi-inches').value);
         const weight = parseFloat(document.getElementById('bmi-weight').value);
+        const totalInches = ((feet || 0) * 12) + (inches || 0);
 
-        if (!height || !weight || height <= 0 || weight <= 0) {
+        if (!totalInches || !weight || totalInches <= 0 || weight <= 0) {
             UIComponents.showToast(
                 'Please enter valid height and weight values',
                 'error',
@@ -175,7 +177,7 @@ const EnquiryModule = (() => {
         }
 
         // Calculate BMI: weight (kg) / (height (m))^2
-        const heightInMeters = height / 100;
+        const heightInMeters = totalInches * 0.0254;
         const bmi = weight / (heightInMeters * heightInMeters);
 
         // Determine category
@@ -249,8 +251,11 @@ const EnquiryModule = (() => {
                 </div>
                 <div class="bmi-inputs-grid">
                     <div class="bmi-input-group">
-                        <label class="bmi-label">Height (cm)</label>
-                        <input type="number" class="bmi-input" id="bmi-height" placeholder="e.g., 170" min="100" max="250" step="0.1">
+                        <label class="bmi-label">Height</label>
+                        <div style="display: flex; gap: 0.75rem;">
+                            <input type="number" class="bmi-input" id="bmi-feet" placeholder="Ft" min="1" max="8" step="1">
+                            <input type="number" class="bmi-input" id="bmi-inches" placeholder="In" min="0" max="11" step="1">
+                        </div>
                     </div>
                     <div class="bmi-input-group">
                         <label class="bmi-label">Weight (kg)</label>

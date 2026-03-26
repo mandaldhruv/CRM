@@ -28,6 +28,7 @@ const MemberModule = (() => {
     let pendingInvoiceMemberData = null;
     let pendingInvoiceEditTarget = null;
     let pendingInvoiceNeedsPersistence = false;
+    let pendingInvoiceAssets = null;
 
     /**
      * MEMBER FORM CONFIGURATION
@@ -806,12 +807,42 @@ const MemberModule = (() => {
         memberId: editTarget?.memberId || formData.memberId || generateMemberId()
     });
 
-    const openInvoicePreviewModal = (memberData) => {
+    const getBase64FromUrl = async (url) => {
+        try {
+            if (!url) return null;
+            const data = await fetch(url);
+            const blob = await data.blob();
+            return await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(blob);
+                reader.onloadend = () => resolve(reader.result);
+            });
+        } catch (error) {
+            console.warn('[MemberModule] Unable to convert image URL to base64', url, error);
+            return null;
+        }
+    };
+
+    const resolveInvoiceAssets = async () => {
+        const settings = SettingsManager.getCompanyProfile();
+        const logoUrl = typeof settings?.logoUrl === 'string' ? settings.logoUrl.trim() : '';
+        const signatureUrl = typeof settings?.signatureUrl === 'string' ? settings.signatureUrl.trim() : '';
+
+        const [logoSrc, signatureSrc] = await Promise.all([
+            logoUrl ? getBase64FromUrl(logoUrl) : Promise.resolve(null),
+            signatureUrl ? getBase64FromUrl(signatureUrl) : Promise.resolve(null)
+        ]);
+
+        return { logoSrc, signatureSrc };
+    };
+
+    const openInvoicePreviewModal = async (memberData) => {
         const previewModal = document.getElementById('invoice-preview-modal');
         const renderArea = document.getElementById('invoice-render-area');
         if (!previewModal || !renderArea) return;
 
-        renderArea.innerHTML = generateInvoiceHTML(memberData);
+        pendingInvoiceAssets = await resolveInvoiceAssets();
+        renderArea.innerHTML = generateInvoiceHTML(memberData, pendingInvoiceAssets);
         previewModal.classList.add('active');
         previewModal.setAttribute('aria-hidden', 'false');
     };
@@ -825,6 +856,7 @@ const MemberModule = (() => {
         if (renderArea) {
             renderArea.innerHTML = '';
         }
+        pendingInvoiceAssets = null;
     };
 
     const persistMemberRecord = async (memberData, editTarget = null) => {
@@ -956,6 +988,8 @@ const MemberModule = (() => {
         try {
             memberSubmitInFlight = true;
             const safeMemberId = String(pendingInvoiceMemberData.memberId || 'invoice').replace(/[^\w-]+/g, '-');
+            pendingInvoiceAssets = await resolveInvoiceAssets();
+            renderArea.innerHTML = generateInvoiceHTML(pendingInvoiceMemberData, pendingInvoiceAssets);
             await downloadInvoicePDF(`${safeMemberId}.pdf`, renderArea);
 
             const phoneNumber = sanitizePhoneNumber(pendingInvoiceMemberData.contact);
@@ -964,8 +998,16 @@ const MemberModule = (() => {
                 return;
             }
 
-            const message = encodeURIComponent(`Welcome to the Gym! Here is your invoice for ${pendingInvoiceMemberData.firstName || 'your membership'}.`);
-            const whatsappUrl = `https://wa.me/91${phoneNumber}?text=${message}`;
+            const companyProfile = SettingsManager.getCompanyProfile();
+            const gymName = companyProfile.gymName || 'our Gym';
+            const firstName = pendingInvoiceMemberData.firstName ? pendingInvoiceMemberData.firstName.trim() : 'there';
+            const party = String.fromCodePoint(0x1F389);
+            const flex = String.fromCodePoint(0x1F4AA);
+            const fire = String.fromCodePoint(0x1F525);
+            const rawMessage = `Welcome to the ${gymName} family, ${firstName}! ${party}\n\nWe are super excited to kickstart your fitness journey with us. Please find your membership invoice attached for your records.\n\nLet's crush those goals together! ${flex}${fire}`;
+            const whatsappUrl = `https://web.whatsapp.com/send?phone=91${phoneNumber}&text=${encodeURIComponent(rawMessage)}`;
+            console.log(rawMessage);
+            console.log(whatsappUrl);
             window.open(whatsappUrl, '_blank');
 
             if (pendingInvoiceNeedsPersistence) {
@@ -1020,7 +1062,7 @@ const MemberModule = (() => {
 
             closeModal('modal-drawer');
             await yieldToBrowser();
-            openInvoicePreviewModal(pendingInvoiceMemberData);
+            await openInvoicePreviewModal(pendingInvoiceMemberData);
         } catch (error) {
             console.error('[MemberModule] Form submission failed', error);
             UIComponents.showToast('Unable to prepare the invoice preview right now.', 'error', 'Preview Failed');
@@ -1037,18 +1079,18 @@ const MemberModule = (() => {
     /**
      * Show invoice preview modal
      */
-    const showInvoicePreview = (memberData, autoOpen = false) => {
+    const showInvoicePreview = async (memberData, autoOpen = false) => {
         pendingMemberFormData = { ...memberData, agreeTerms: true };
         pendingInvoiceMemberData = normalizeMemberDraftData(memberData, memberData?.id ? memberData : null);
         pendingInvoiceEditTarget = memberData?.id ? memberData : null;
         pendingInvoiceNeedsPersistence = false;
-        openInvoicePreviewModal(pendingInvoiceMemberData);
+        await openInvoicePreviewModal(pendingInvoiceMemberData);
     };
 
     /**
      * Generate invoice HTML
      */
-    const generateInvoiceHTML = (memberData) => {
+    const generateInvoiceHTML = (memberData, invoiceAssets = {}) => {
         const discountAmount = Number(memberData.discount) || 0;
         const balance = calculateBalance(memberData.fees, memberData.discount, memberData.paidAmount);
         const nextDueDate = memberData.endDate || new Date().toLocaleDateString();
@@ -1065,20 +1107,14 @@ const MemberModule = (() => {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
-        const applyCorsProxy = (url) => {
-            if (!url || url.startsWith('data:')) return url;
-            return 'https://corsproxy.io/?' + encodeURIComponent(url);
-        };
         const gymName = String(settings?.gymName || 'Gym CRM').trim();
-        const logoUrl = typeof settings?.logoUrl === 'string' ? settings.logoUrl.trim() : '';
-        const signatureUrl = typeof settings?.signatureUrl === 'string' ? settings.signatureUrl.trim() : '';
-        const finalLogoUrl = logoUrl ? applyCorsProxy(logoUrl) : null;
-        const finalSignatureUrl = signatureUrl ? applyCorsProxy(signatureUrl) : null;
+        const finalLogoUrl = invoiceAssets.logoSrc || '';
+        const finalSignatureUrl = invoiceAssets.signatureSrc || '';
         const logoMarkup = finalLogoUrl
-            ? `<img src="${escapeInvoice(finalLogoUrl)}" alt="Gym Logo" crossorigin="anonymous" style="max-height: 60px; object-fit: contain;" onerror="this.style.display='none'">`
+            ? `<img src="${escapeInvoice(finalLogoUrl)}" alt="Gym Logo" style="max-height: 60px; object-fit: contain;" onerror="this.style.display='none'">`
             : `<h2 style="margin:0;">${escapeInvoice(gymName)}</h2>`;
         const signatureMarkup = finalSignatureUrl
-            ? `<img src="${escapeInvoice(finalSignatureUrl)}" alt="Digital Signature" crossorigin="anonymous" style="max-height: 50px; object-fit: contain;" onerror="this.style.display='none'">`
+            ? `<img src="${escapeInvoice(finalSignatureUrl)}" alt="Digital Signature" style="max-height: 50px; object-fit: contain;" onerror="this.style.display='none'">`
             : '';
         const brandMarkup = finalLogoUrl
             ? `${logoMarkup}<div style="font-size: 28px; font-weight: 700; margin: 6px 0 6px;">${escapeInvoice(gymName)}</div>`
@@ -1459,7 +1495,7 @@ const MemberModule = (() => {
                                 <span class="material-icons-round">edit</span> Edit
                             </button>
                             <button class="btn-icon" onclick="WhatsAppUtils.openMemberPaymentReminder('${member.id}')">
-                                <span class="material-icons-round">chat</span> Reminder
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="margin-right: 4px; vertical-align: middle;"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.82 9.82 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg> WhatsApp
                             </button>
                             <button class="btn-icon" onclick="MemberModule.viewInvoice('${member.id}')">
                                 <span class="material-icons-round">receipt</span>
@@ -1503,7 +1539,7 @@ const MemberModule = (() => {
                             <span class="material-icons-round">edit</span> Edit
                         </button>
                         <button class="btn-icon" type="button" data-action="whatsapp" data-member-id="${member.id}" aria-label="Send WhatsApp update">
-                            <span class="material-icons-round">forum</span> WhatsApp
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="margin-right: 4px; vertical-align: middle;"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.82 9.82 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg> WhatsApp
                         </button>
                         <button class="btn-icon" type="button" data-action="invoice" data-member-id="${member.id}">
                             <span class="material-icons-round">receipt</span>

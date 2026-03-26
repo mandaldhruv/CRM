@@ -257,19 +257,112 @@ const UIComponents = (() => {
                 return;
             }
 
-            const birthdayWishTrigger = e.target.closest('[data-action="wish-birthday"]');
-            if (birthdayWishTrigger) {
+            const sendWishAllTrigger = e.target.closest('[data-action="send-wish-all"]');
+            if (sendWishAllTrigger) {
                 e.preventDefault();
-                const phone = String(birthdayWishTrigger.dataset.phone || '').replace(/\D/g, '').slice(-10);
-                const name = String(birthdayWishTrigger.dataset.name || 'there').trim() || 'there';
+                let members = [];
+
+                try {
+                    members = JSON.parse(decodeURIComponent(sendWishAllTrigger.dataset.members || '[]'));
+                } catch (error) {
+                    console.error('Unable to parse birthday bulk-send payload.', error);
+                    return;
+                }
+
+                const validMembers = members
+                    .map((member) => ({
+                        phone: String(member.phone || '').replace(/\D/g, '').slice(-10),
+                        name: String(member.name || 'there').trim() || 'there'
+                    }))
+                    .filter((member) => member.phone);
+
+                if (validMembers.length === 0) {
+                    console.error('Send Wish All action is missing valid phone numbers.');
+                    return;
+                }
+
+                const companyProfile = SettingsManager.getCompanyProfile();
+                const gymName = companyProfile.gymName || 'our Gym';
+                const cake = String.fromCodePoint(0x1F382);
+                const party = String.fromCodePoint(0x1F389);
+
+                validMembers.forEach((member) => {
+                    const rawMessage = `Happy Birthday ${member.name}! ${cake} Wishing you a fantastic day and a great year of fitness ahead from all of us at ${gymName}! ${party}`;
+                    const whatsappUrl = `https://web.whatsapp.com/send?phone=91${member.phone}&text=${encodeURIComponent(rawMessage)}`;
+                    console.log(rawMessage);
+                    console.log(whatsappUrl);
+                    window.open(whatsappUrl, '_blank');
+                });
+                return;
+            }
+
+            const safeBirthdayWishTrigger = e.target.closest('[data-action="wish-birthday"]');
+            if (safeBirthdayWishTrigger) {
+                e.preventDefault();
+                const phone = String(safeBirthdayWishTrigger.dataset.phone || '').replace(/\D/g, '').slice(-10);
+                const name = String(safeBirthdayWishTrigger.dataset.name || 'there').trim() || 'there';
 
                 if (!phone) {
                     console.error('Birthday wish action is missing a valid phone number.');
                     return;
                 }
 
-                const message = encodeURIComponent(`Happy Birthday ${name}! 🎉 Wishing you a fantastic day and a great year of fitness ahead from all of us at the Gym!`);
-                window.open(`https://wa.me/91${phone}?text=${message}`, '_blank');
+                const companyProfile = SettingsManager.getCompanyProfile();
+                const gymName = companyProfile.gymName || 'our Gym';
+                const cake = String.fromCodePoint(0x1F382);
+                const party = String.fromCodePoint(0x1F389);
+                const rawMessage = `Happy Birthday ${name}! ${cake} Wishing you a fantastic day and a great year of fitness ahead from all of us at ${gymName}! ${party}`;
+                const whatsappUrl = `https://web.whatsapp.com/send?phone=91${phone}&text=${encodeURIComponent(rawMessage)}`;
+                console.log(rawMessage);
+                console.log(whatsappUrl);
+                window.open(whatsappUrl, '_blank');
+                return;
+            }
+
+            const renewalTrigger = e.target.closest('[data-action="send-renewal"]');
+            if (renewalTrigger) {
+                e.preventDefault();
+                const phone = String(renewalTrigger.dataset.phone || '').replace(/\D/g, '').slice(-10);
+                const name = String(renewalTrigger.dataset.name || 'there').trim() || 'there';
+                const date = String(renewalTrigger.dataset.date || '').trim();
+
+                if (!phone) {
+                    console.error('Renewal reminder action is missing a valid phone number.');
+                    return;
+                }
+
+                const companyProfile = SettingsManager.getCompanyProfile();
+                const gymName = companyProfile.gymName || 'our Gym';
+                const parsedDate = /^\d{2}\/\d{2}\/\d{4}$/.test(date)
+                    ? (() => {
+                        const [day, month, year] = date.split('/').map(Number);
+                        return new Date(year, month - 1, day);
+                    })()
+                    : new Date(date);
+                const formattedDate = Number.isNaN(parsedDate.getTime())
+                    ? date
+                    : parsedDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                const wave = String.fromCodePoint(0x1F44B);
+                const flex = String.fromCodePoint(0x1F4AA);
+                const rawMessage = `Hi ${name}! ${wave} Hope you're having a great week.\n\nJust a gentle reminder from ${gymName} that your membership is expiring on ${formattedDate}. Let us know if you'd like to renew and keep crushing your fitness goals with us! ${flex}`;
+                const whatsappUrl = `https://web.whatsapp.com/send?phone=91${phone}&text=${encodeURIComponent(rawMessage)}`;
+                console.log(rawMessage);
+                console.log(whatsappUrl);
+                window.open(whatsappUrl, '_blank');
+                return;
+            }
+            const financeCardTrigger = e.target.closest('[data-action="view-revenue-details"], [data-action="view-expense-details"], [data-action="view-profit-details"]');
+            if (financeCardTrigger) {
+                e.preventDefault();
+                const action = financeCardTrigger.dataset.action;
+                
+                if (action === 'view-revenue-details') {
+                    window.FinanceAnalytics?.openTransactionDetails?.('revenue');
+                } else if (action === 'view-expense-details') {
+                    window.FinanceAnalytics?.openTransactionDetails?.('expenses');
+                } else if (action === 'view-profit-details') {
+                    window.FinanceAnalytics?.openTransactionDetails?.('profit');
+                }
                 return;
             }
 
@@ -583,7 +676,7 @@ const UIComponents = (() => {
                 ]
             },
             { name: 'description', label: 'Description', type: 'text', required: true, placeholder: 'e.g., Treadmill repair' },
-            { name: 'amount', label: 'Amount (₹)', type: 'number', required: true, placeholder: '0' },
+            { name: 'amount', label: 'Amount (â‚¹)', type: 'number', required: true, placeholder: '0' },
             { name: 'date', label: 'Date', type: 'date', required: true },
             { name: 'vendor', label: 'Vendor', type: 'text', required: false, placeholder: 'Vendor name' },
             { name: 'notes', label: 'Notes', type: 'textarea', required: false, placeholder: 'Additional details...' }
@@ -597,7 +690,7 @@ const UIComponents = (() => {
         fields: [
             { name: 'name', label: 'Package Name', type: 'text', required: true, placeholder: 'e.g., 3-Month Elite' },
             { name: 'description', label: 'Description', type: 'textarea', required: true, placeholder: 'Package details...' },
-            { name: 'price', label: 'Price (₹)', type: 'number', required: true, placeholder: '0' },
+            { name: 'price', label: 'Price (â‚¹)', type: 'number', required: true, placeholder: '0' },
             { name: 'durationMonths', label: 'Duration (months)', type: 'number', required: true, placeholder: '3' },
             { name: 'capacity', label: 'Max Sessions/Week', type: 'number', required: false, placeholder: '5' }
         ]
@@ -625,7 +718,7 @@ const UIComponents = (() => {
                 ]
             },
             { name: 'purchaseDate', label: 'Purchase Date', type: 'date', required: true },
-            { name: 'price', label: 'Price (â‚¹)', type: 'number', required: true, placeholder: '0' }
+            { name: 'price', label: 'Price (Ã¢â€šÂ¹)', type: 'number', required: true, placeholder: '0' }
         ]
     };
 
@@ -637,7 +730,7 @@ const UIComponents = (() => {
             { name: 'memberId', label: 'Member ID', type: 'text', required: true, placeholder: 'Member ID' },
             { name: 'memberName', label: 'Member Name', type: 'text', required: true, placeholder: 'Full name' },
             { name: 'description', label: 'Description', type: 'text', required: true, placeholder: 'Payment for...' },
-            { name: 'amount', label: 'Amount (₹)', type: 'number', required: true, placeholder: '0' },
+            { name: 'amount', label: 'Amount (â‚¹)', type: 'number', required: true, placeholder: '0' },
             { name: 'paymentMethod', label: 'Payment Method', type: 'select', required: true,
                 options: [
                     { value: 'cash', label: 'Cash' },

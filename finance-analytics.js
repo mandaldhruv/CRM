@@ -8,6 +8,12 @@
 const FinanceAnalytics = (() => {
     let collectionVsExpensesChart = null;
     let revenueByPackageChart = null;
+    const escapeHTML = (value) => String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 
     /**
      * Get current year
@@ -306,7 +312,7 @@ const FinanceAnalytics = (() => {
         const netProfit = calculateNetProfit();
 
         const metricsHTML = `
-            <div class="card stat-card metric-card">
+            <div class="card stat-card metric-card finance-click-card" style="cursor: pointer; transition: transform 0.2s;" data-action="view-revenue-details">
                 <div class="metric-label">Total Revenue</div>
                 <div class="metric-value">${formatINR(totalIncome)}</div>
                 <div class="metric-trend" style="color: var(--success);">
@@ -314,7 +320,7 @@ const FinanceAnalytics = (() => {
                 </div>
             </div>
 
-            <div class="card stat-card metric-card">
+            <div class="card stat-card metric-card finance-click-card" style="cursor: pointer; transition: transform 0.2s;" data-action="view-expense-details">
                 <div class="metric-label">Total Expenses</div>
                 <div class="metric-value">${formatINR(totalExpenses)}</div>
                 <div class="metric-trend" style="color: var(--warning);">
@@ -322,7 +328,7 @@ const FinanceAnalytics = (() => {
                 </div>
             </div>
 
-            <div class="card stat-card metric-card" style="background: var(--primary-gradient); color: white;">
+            <div class="card stat-card metric-card finance-click-card" style="background: var(--primary-gradient); color: white; cursor: pointer; transition: transform 0.2s;" data-action="view-profit-details">
                 <div class="metric-label">Net Profit</div>
                 <div class="metric-value">${formatINR(netProfit)}</div>
                 <div class="metric-trend" style="color: rgba(255,255,255,0.8);">
@@ -336,6 +342,88 @@ const FinanceAnalytics = (() => {
             metricsContainer.innerHTML = metricsHTML;
         }
     };
+
+    const getRecords = (source) => {
+        if (!source) return [];
+        if (typeof source.getAll === 'function') {
+            return source.getAll() || [];
+        }
+        return Array.isArray(source) ? source : [];
+    };
+
+    const openTransactionDetails = (type = 'revenue') => {
+        let title = '';
+        let tableHTML = '<table class="data-table" style="width: 100%; text-align: left; border-collapse: collapse;">';
+        tableHTML += '<thead><tr style="border-bottom: 2px solid var(--border-color);"><th style="padding: 10px;">Date</th>';
+
+        if (type === 'revenue') {
+            title = 'Revenue Breakdown';
+            tableHTML += '<th style="padding: 10px;">Member / Detail</th><th style="padding: 10px;">Amount</th></tr></thead><tbody>';
+            const receipts = getRecords(window.StateManager?.Receipts);
+
+            if (receipts.length === 0) {
+                tableHTML += '<tr><td colspan="3" style="padding: 15px; text-align: center;">No revenue recorded yet.</td></tr>';
+            } else {
+                [...receipts]
+                    .sort((a, b) => new Date(b.date || b.receiptDate || b.createdAt || 0) - new Date(a.date || a.receiptDate || a.createdAt || 0))
+                    .forEach((r) => {
+                        const dateValue = r.date || r.receiptDate || r.createdAt || '';
+                        const parsedDate = new Date(dateValue);
+                        const dateStr = Number.isNaN(parsedDate.getTime())
+                            ? escapeHTML(String(dateValue || 'N/A'))
+                            : parsedDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                        const amount = parseFloat(r.amount || 0).toLocaleString('en-IN');
+                        tableHTML += `<tr style="border-bottom: 1px solid var(--border-color);"><td style="padding: 10px;">${dateStr}</td><td style="padding: 10px;">${escapeHTML(r.memberName || r.description || r.package || 'Payment')}</td><td style="padding: 10px; color: #25D366; font-weight: bold;">₹${amount}</td></tr>`;
+                    });
+            }
+        } else if (type === 'expenses') {
+            title = 'Expense Breakdown';
+            tableHTML += '<th style="padding: 10px;">Category / Vendor</th><th style="padding: 10px;">Amount</th></tr></thead><tbody>';
+            const expenses = getRecords(window.StateManager?.Expenses);
+
+            if (expenses.length === 0) {
+                tableHTML += '<tr><td colspan="3" style="padding: 15px; text-align: center;">No expenses recorded yet.</td></tr>';
+            } else {
+                [...expenses]
+                    .sort((a, b) => new Date(b.date || b.expenseDate || b.createdAt || 0) - new Date(a.date || a.expenseDate || a.createdAt || 0))
+                    .forEach((e) => {
+                        const dateValue = e.date || e.expenseDate || e.createdAt || '';
+                        const parsedDate = new Date(dateValue);
+                        const dateStr = Number.isNaN(parsedDate.getTime())
+                            ? escapeHTML(String(dateValue || 'N/A'))
+                            : parsedDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                        const amount = parseFloat(e.amount || 0).toLocaleString('en-IN');
+                        tableHTML += `<tr style="border-bottom: 1px solid var(--border-color);"><td style="padding: 10px;">${dateStr}</td><td style="padding: 10px;">${escapeHTML(`${e.category || 'Expense'} - ${e.vendor || e.title || ''}`.trim())}</td><td style="padding: 10px; color: #ff4d4d; font-weight: bold;">₹${amount}</td></tr>`;
+                    });
+            }
+        } else if (type === 'profit') {
+            title = 'Net Profit Analysis';
+            tableHTML += '<th style="padding: 10px;">Metric</th><th style="padding: 10px;">Total</th></tr></thead><tbody>';
+
+            const receipts = getRecords(window.StateManager?.Receipts);
+            const expenses = getRecords(window.StateManager?.Expenses);
+
+            const totalRev = receipts.reduce((sum, r) => sum + parseFloat(r.amount || 0), 0);
+            const totalExp = expenses.reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+            const net = totalRev - totalExp;
+            const netColor = net >= 0 ? '#25D366' : '#ff4d4d';
+
+            tableHTML += `<tr style="border-bottom: 1px solid var(--border-color);"><td style="padding: 10px;">Total Revenue Generated</td><td style="padding: 10px; font-weight: bold;">₹${totalRev.toLocaleString('en-IN')}</td></tr>`;
+            tableHTML += `<tr style="border-bottom: 1px solid var(--border-color);"><td style="padding: 10px;">Total Expenses Incurred</td><td style="padding: 10px; font-weight: bold;">₹${totalExp.toLocaleString('en-IN')}</td></tr>`;
+            tableHTML += `<tr style="background: var(--bg-soft);"><td style="padding: 10px; font-weight: bold;">Overall Net Profit</td><td style="padding: 10px; color: ${netColor}; font-weight: bold; font-size: 1.1rem;">₹${net.toLocaleString('en-IN')}</td></tr>`;
+        }
+
+        tableHTML += '</tbody></table>';
+
+        if (window.UIComponents && window.UIComponents.openModal) {
+            window.UIComponents.openModal(title, { content: tableHTML });
+        } else {
+            console.error('UIComponents.openModal is not available.');
+        }
+    };
+
+    window.FinanceAnalytics = window.FinanceAnalytics || {};
+    window.FinanceAnalytics.openTransactionDetails = openTransactionDetails;
 
     /**
      * Initialize finance analytics
@@ -352,6 +440,7 @@ const FinanceAnalytics = (() => {
      */
     const refresh = () => {
         initialize();
+        window.DashboardAnalytics?.refresh?.();
     };
 
     /**
@@ -367,6 +456,7 @@ const FinanceAnalytics = (() => {
         renderFinanceMetrics,
         renderCollectionVsExpensesChart,
         renderRevenueByPackageChart,
+        openTransactionDetails,
         initialize,
         refresh
     };
