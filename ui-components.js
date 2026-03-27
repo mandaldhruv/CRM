@@ -9,6 +9,48 @@ const UIComponents = (() => {
     let currentForm = null;
     let currentEntity = null;
 
+    const formatDateInputValue = (value) => {
+        if (value === null || value === undefined) {
+            return '';
+        }
+
+        const rawValue = String(value).trim();
+        if (!rawValue) {
+            return '';
+        }
+
+        if (/^\d{4}-\d{2}-\d{2}$/.test(rawValue)) {
+            return rawValue;
+        }
+
+        if (rawValue.includes('T')) {
+            return rawValue.split('T')[0];
+        }
+
+        const parsed = new Date(rawValue);
+        if (Number.isNaN(parsed.getTime())) {
+            return '';
+        }
+
+        const year = parsed.getFullYear();
+        const month = String(parsed.getMonth() + 1).padStart(2, '0');
+        const day = String(parsed.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const setSafeInputValue = (input, value) => {
+        if (!input) {
+            return;
+        }
+
+        if (input.type === 'date') {
+            input.value = formatDateInputValue(value);
+            return;
+        }
+
+        input.value = value ?? '';
+    };
+
     const ValidationUtils = {
         emailRegex: /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/,
         phoneRegex: /^\d{10}$/,
@@ -187,6 +229,9 @@ const UIComponents = (() => {
 
         modal.querySelectorAll('form').forEach((form) => {
             form.reset();
+            form.querySelectorAll('input[type="date"]').forEach((input) => {
+                setSafeInputValue(input, input.value);
+            });
         });
 
         modal.classList.remove('active');

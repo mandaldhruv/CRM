@@ -11,6 +11,8 @@
  */
 
 const MemberModule = (() => {
+    const MEMBERS_API_URL = 'http://localhost:5000/api/v1/members';
+
     // State management
     let currentFilters = {
         status: 'all',
@@ -29,6 +31,7 @@ const MemberModule = (() => {
     let pendingInvoiceEditTarget = null;
     let pendingInvoiceNeedsPersistence = false;
     let pendingInvoiceAssets = null;
+    let memberCache = [];
 
     /**
      * MEMBER FORM CONFIGURATION
@@ -109,24 +112,30 @@ const MemberModule = (() => {
         { id: 'premium-6m', name: 'Premium 6 Months', durationMonths: 6, price: 5400 }
     ];
 
-    const getAvailablePackages = () => {
-        const packageRecords = typeof StateManager !== 'undefined' && StateManager.Packages
-            ? StateManager.Packages.getAll()
-            : JSON.parse(localStorage.getItem('ka_packages') || '[]');
-        const normalized = (Array.isArray(packageRecords) ? packageRecords : [])
-            .map((pkg) => ({
-                id: String(pkg.id || '').trim(),
-                name: String(pkg.name || '').trim(),
-                durationMonths: Number(pkg.durationMonths || 0),
-                price: Number(pkg.price ?? pkg.basePrice ?? 0)
-            }))
-            .filter((pkg) => pkg.id && pkg.name);
-
-        return normalized.length > 0 ? normalized : DEFAULT_PACKAGE_CATALOG;
-    };
+    const getAvailablePackages = () => DEFAULT_PACKAGE_CATALOG;
 
     const getPackageConfigById = (packageId) => {
         return getAvailablePackages().find((pkg) => String(pkg.id) === String(packageId)) || null;
+    };
+
+    const normalizePackageLookupValue = (value = '') => {
+        return String(value || '')
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, ' ');
+    };
+
+    const getPackageConfigByName = (packageName) => {
+        const normalizedPackageName = normalizePackageLookupValue(packageName);
+        if (!normalizedPackageName) {
+            return null;
+        }
+
+        return getAvailablePackages().find((pkg) => {
+            const normalizedId = normalizePackageLookupValue(pkg.id);
+            const normalizedName = normalizePackageLookupValue(pkg.name);
+            return normalizedPackageName === normalizedId || normalizedPackageName === normalizedName;
+        }) || null;
     };
 
     /**
@@ -170,13 +179,40 @@ const MemberModule = (() => {
         return Math.min(Math.max(actualDiscount, 0), normalizedFees);
     };
 
+    const getTaxPercentage = () => {
+        try {
+            return Number(SettingsManager?.getTaxConfiguration?.()?.taxPercentage) || 0;
+        } catch (error) {
+            console.warn('[MemberModule] Unable to resolve tax configuration. Falling back to 0%.', error);
+            return 0;
+        }
+    };
+
+    const calculateInvoiceTotals = (fees, discountValue, paidAmount, discountType = 'amount', taxPercentage = getTaxPercentage()) => {
+        const normalizedFees = Number(fees) || 0;
+        const discountAmount = calculateDiscountAmount(normalizedFees, discountValue, discountType);
+        const subtotal = Math.max(0, normalizedFees - discountAmount);
+        const normalizedTaxPercentage = Number(taxPercentage) || 0;
+        const taxAmount = (subtotal * normalizedTaxPercentage) / 100;
+        const netTotal = subtotal + taxAmount;
+        const normalizedPaidAmount = Number(paidAmount) || 0;
+        const balance = Math.max(0, netTotal - normalizedPaidAmount);
+
+        return {
+            discountAmount,
+            subtotal,
+            taxAmount,
+            netTotal,
+            paidAmount: normalizedPaidAmount,
+            balance
+        };
+    };
+
     /**
-     * Calculate balance (fees after discount - paid amount)
+     * Calculate balance (fees after discount + tax - paid amount)
      */
-    const calculateBalance = (fees, discount, paid) => {
-        const finalAmount = (Number(fees) || 0) - (Number(discount) || 0);
-        const balance = finalAmount - (paid || 0);
-        return Math.max(0, balance);
+    const calculateBalance = (fees, discountValue, paid, discountType = 'amount', taxPercentage = getTaxPercentage()) => {
+        return calculateInvoiceTotals(fees, discountValue, paid, discountType, taxPercentage).balance;
     };
 
     /**
@@ -238,14 +274,16 @@ const MemberModule = (() => {
 
         const updateBalance = () => {
             const fees = parseFloat(feesInput?.value || 0);
-            const discount = calculateDiscountAmount(
-                fees,
-                parseFloat(discountValueInput?.value || 0),
-                discountTypeInput?.value || 'amount'
-            );
+            const discountValue = parseFloat(discountValueInput?.value || 0);
+            const discountType = discountTypeInput?.value || 'amount';
             const paid = parseFloat(paidInput?.value || 0);
-            const balance = calculateBalance(fees, discount, paid);
-            if (balanceInput) balanceInput.value = balance.toFixed(2);
+            const totals = calculateInvoiceTotals(
+                fees,
+                discountValue,
+                paid,
+                discountType
+            );
+            if (balanceInput) balanceInput.value = totals.balance.toFixed(2);
         };
 
         if (discountValueInput) discountValueInput.addEventListener('input', updateBalance);
@@ -265,14 +303,16 @@ const MemberModule = (() => {
         const balanceInput = document.querySelector('[name="balance"]');
 
         const fees = parseFloat(feesInput?.value || 0);
-        const discount = calculateDiscountAmount(
-            fees,
-            parseFloat(discountValueInput?.value || 0),
-            discountTypeInput?.value || 'amount'
-        );
+        const discountValue = parseFloat(discountValueInput?.value || 0);
+        const discountType = discountTypeInput?.value || 'amount';
         const paid = parseFloat(paidInput?.value || 0);
-        const balance = calculateBalance(fees, discount, paid);
-        if (balanceInput) balanceInput.value = balance.toFixed(2);
+        const totals = calculateInvoiceTotals(
+            fees,
+            discountValue,
+            paid,
+            discountType
+        );
+        if (balanceInput) balanceInput.value = totals.balance.toFixed(2);
     };
 
     const stopMemberCamera = () => {
@@ -630,6 +670,10 @@ const MemberModule = (() => {
                 if (typeof value === 'string' && value.trim().toUpperCase() === 'NA') {
                     value = '';
                 }
+
+                if (field.type === 'date') {
+                    value = formatDateFieldValue(value);
+                }
                 
                 // Generate member ID if needed
                 if (field.name === 'memberId' && !value) {
@@ -787,39 +831,301 @@ const MemberModule = (() => {
 
     const sanitizePhoneNumber = (value = '') => String(value).replace(/\D/g, '').slice(-10);
 
-    const normalizeMemberDraftData = (formData = {}, editTarget = null) => ({
-        ...formData,
-        email: String(formData.email || '').trim() || 'NA',
-        address: String(formData.address || '').trim() || 'NA',
-        age: Number(formData.age) || 0,
-        fees: Number(formData.fees) || 0,
-        discountValue: Number(formData.discountValue) || 0,
-        discountType: formData.discountType || 'amount',
-        discount: calculateDiscountAmount(
-            Number(formData.fees) || 0,
-            Number(formData.discountValue) || 0,
-            formData.discountType || 'amount'
-        ),
-        paidAmount: Number(formData.paidAmount) || 0,
-        balance: Number(formData.balance) || 0,
-        status: 'active',
-        joinedDate: new Date().toISOString().split('T')[0],
-        memberId: editTarget?.memberId || formData.memberId || generateMemberId()
-    });
+    const showMembersToast = (message, type = 'info', title = 'Members') => {
+        if (window.UIComponents?.showToast) {
+            UIComponents.showToast(message, type, title);
+        } else {
+            console[type === 'error' ? 'error' : 'log'](`[MemberModule] ${message}`);
+        }
+    };
+
+    const getCachedMemberById = (memberId) => {
+        return memberCache.find((member) => String(member.id) === String(memberId)) || null;
+    };
+
+    const getPackageDisplayName = (packageId) => {
+        const selectedPackage = getPackageConfigById(packageId);
+        return selectedPackage?.name || String(packageId || '').trim() || 'Membership';
+    };
+
+    const formatDateFieldValue = (value) => {
+        if (value === null || value === undefined) {
+            return '';
+        }
+
+        const rawValue = String(value).trim();
+        if (!rawValue || rawValue.toUpperCase() === 'NA') {
+            return '';
+        }
+
+        if (/^\d{4}-\d{2}-\d{2}$/.test(rawValue)) {
+            return rawValue;
+        }
+
+        if (rawValue.includes('T')) {
+            return rawValue.split('T')[0];
+        }
+
+        const parsed = new Date(rawValue);
+        if (Number.isNaN(parsed.getTime())) {
+            return '';
+        }
+
+        const year = parsed.getFullYear();
+        const month = String(parsed.getMonth() + 1).padStart(2, '0');
+        const day = String(parsed.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const extractMemberFromResponse = (payload) => {
+        if (!payload?.success || !payload?.data) {
+            return null;
+        }
+
+        return payload.data.member || payload.data;
+    };
+
+    const mapApiMemberToUi = (member = {}) => {
+        const packageName = String(member.package_name || member.packageName || member.package || '').trim();
+        const packageConfig = getPackageConfigByName(packageName) || getPackageConfigById(packageName);
+        const totalPaid = Number(member.total_paid ?? member.totalPaid ?? 0);
+        const balance = Number(member.balance) || 0;
+
+        return {
+            id: member.id || '',
+            branchId: member.branch_id || member.branchId || '',
+            memberId: String(member.member_code || member.memberId || ''),
+            firstName: String(member.first_name || member.firstName || '').trim(),
+            lastName: String(member.last_name || member.lastName || '').trim(),
+            contact: String(member.contact_no || member.contact || '').trim(),
+            email: String(member.email || '').trim(),
+            dob: member.date_of_birth || member.dob || '',
+            age: calculateAge(member.date_of_birth || member.dob),
+            gender: String(member.gender || '').toLowerCase(),
+            address: String(member.address || '').trim(),
+            city: String(member.city || '').trim(),
+            package: packageConfig?.id || packageName,
+            packageLabel: packageConfig?.name || packageName || 'N/A',
+            startDate: member.start_date || member.startDate || '',
+            endDate: member.end_date || member.endDate || '',
+            fees: totalPaid + balance,
+            paidAmount: totalPaid,
+            balance,
+            totalPaid,
+            status: String(member.status || '').toLowerCase() || getMemberStatus(member.end_date || member.endDate).text.toLowerCase(),
+            notes: String(member.notes || '').trim(),
+            memberPhoto: member.photo_url || member.memberPhoto || ''
+        };
+    };
+
+    const loadMembersFromApi = async () => {
+        try {
+            const searchValue = String(document.querySelector('#member-search')?.value || '').trim();
+            const requestUrl = new URL(MEMBERS_API_URL);
+
+            if (searchValue) {
+                requestUrl.searchParams.set('search', searchValue);
+            }
+
+            const response = await fetch(requestUrl.toString(), {
+                method: 'GET',
+                headers: {
+                    Accept: 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Request failed with status ${response.status}`);
+            }
+
+            const payload = await response.json();
+            const members = Array.isArray(payload?.data?.members) ? payload.data.members : [];
+            memberCache = members.map(mapApiMemberToUi);
+            return memberCache;
+        } catch (error) {
+            console.error('[MemberModule] Failed to load members from API', error);
+            throw error;
+        }
+    };
+
+    const fetchMemberById = async (memberId) => {
+        const cachedMember = getCachedMemberById(memberId);
+        if (cachedMember) {
+            return cachedMember;
+        }
+
+        try {
+            const response = await fetch(`${MEMBERS_API_URL}/${encodeURIComponent(memberId)}`, {
+                method: 'GET',
+                headers: {
+                    Accept: 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Request failed with status ${response.status}`);
+            }
+
+            const payload = await response.json();
+            const member = extractMemberFromResponse(payload);
+            if (!member) {
+                return null;
+            }
+
+            const normalizedMember = mapApiMemberToUi(member);
+            memberCache = memberCache.filter((item) => String(item.id) !== String(normalizedMember.id));
+            memberCache.push(normalizedMember);
+            return normalizedMember;
+        } catch (error) {
+            console.error('[MemberModule] Failed to fetch member by id', error);
+            throw error;
+        }
+    };
+
+    const resolveBranchId = async (editTarget = null) => {
+        if (editTarget?.branchId) {
+            return editTarget.branchId;
+        }
+
+        if (window.APP_DEFAULT_BRANCH_ID) {
+            return String(window.APP_DEFAULT_BRANCH_ID).trim();
+        }
+
+        if (memberCache[0]?.branchId) {
+            return memberCache[0].branchId;
+        }
+
+        if (window.DashboardAnalytics?.fetchDashboardData) {
+            try {
+                const dashboardData = await DashboardAnalytics.fetchDashboardData();
+                if (dashboardData?.pulse?.branchId) {
+                    return dashboardData.pulse.branchId;
+                }
+            } catch (error) {
+                console.warn('[MemberModule] Unable to derive branch id from dashboard data', error);
+            }
+        }
+
+        return '';
+    };
+
+    const buildMemberApiPayload = async (memberData, editTarget = null) => {
+        const branchId = await resolveBranchId(editTarget);
+        if (!branchId) {
+            throw new Error('Branch id is required before saving a member');
+        }
+
+        const notes = [
+            memberData.bloodGroup ? `Blood Group: ${memberData.bloodGroup}` : '',
+            memberData.healthDetails ? `Health Details: ${memberData.healthDetails}` : ''
+        ].filter(Boolean).join('\n');
+
+        return {
+            branch_id: branchId,
+            member_code: memberData.memberId,
+            first_name: memberData.firstName,
+            last_name: memberData.lastName || null,
+            gender: memberData.gender || null,
+            date_of_birth: memberData.dob || null,
+            email: String(memberData.email || '').trim() || null,
+            contact_no: memberData.contact,
+            address: String(memberData.address || '').trim() || null,
+            city: String(memberData.city || '').trim() || null,
+            package_name: getPackageDisplayName(memberData.package),
+            start_date: memberData.startDate || null,
+            end_date: memberData.endDate || null,
+            status: memberData.status || 'active',
+            balance: Number(memberData.balance) || 0,
+            total_paid: Number(memberData.paidAmount) || 0,
+            notes: notes || null
+        };
+    };
+
+    const deleteMemberFromApi = async (memberId) => {
+        try {
+            const response = await fetch(`${MEMBERS_API_URL}/${encodeURIComponent(memberId)}`, {
+                method: 'DELETE',
+                headers: {
+                    Accept: 'application/json'
+                }
+            });
+
+            const payload = await response.json().catch(() => ({}));
+
+            if (!response.ok || payload?.success === false) {
+                throw new Error(payload?.message || `Request failed with status ${response.status}`);
+            }
+
+            memberCache = memberCache.filter((member) => String(member.id) !== String(memberId));
+            await renderMembersTableSafe();
+
+            if (window.DashboardAnalytics?.refresh) {
+                DashboardAnalytics.refresh();
+            }
+            if (typeof window.renderReportsHub === 'function') {
+                renderReportsHub();
+            }
+
+            showMembersToast('Member deleted successfully.', 'success', 'Member Deleted');
+            return true;
+        } catch (error) {
+            console.error('[MemberModule] Failed to delete member via API', error);
+            throw error;
+        }
+    };
+
+    const normalizeMemberDraftData = (formData = {}, editTarget = null) => {
+        const fees = Number(formData.fees) || 0;
+        const discountValue = Number(formData.discountValue) || 0;
+        const discountType = formData.discountType || 'amount';
+        const paidAmount = Number(formData.paidAmount) || 0;
+        const totals = calculateInvoiceTotals(fees, discountValue, paidAmount, discountType);
+
+        return {
+            ...formData,
+            email: String(formData.email || '').trim(),
+            address: String(formData.address || '').trim(),
+            city: String(formData.city || '').trim(),
+            age: Number(formData.age) || 0,
+            fees,
+            discountValue,
+            discountType,
+            discount: totals.discountAmount,
+            paidAmount: totals.paidAmount,
+            balance: totals.balance,
+            netTotal: totals.netTotal,
+            taxAmount: totals.taxAmount,
+            subtotal: totals.subtotal,
+            status: 'active',
+            joinedDate: new Date().toISOString().split('T')[0],
+            totalPaid: totals.paidAmount,
+            memberId: editTarget?.memberId || formData.memberId || generateMemberId()
+        };
+    };
 
     const getBase64FromUrl = async (url) => {
+        const fallbackImageDataUrl = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
         try {
-            if (!url) return null;
-            const data = await fetch(url);
+            if (!url) {
+                return fallbackImageDataUrl;
+            }
+
+            const data = await fetch(url, { mode: 'cors' });
+            if (!data.ok) {
+                throw new Error(`Asset request failed with status ${data.status}`);
+            }
+
             const blob = await data.blob();
             return await new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.readAsDataURL(blob);
-                reader.onloadend = () => resolve(reader.result);
+                reader.onloadend = () => resolve(reader.result || fallbackImageDataUrl);
+                reader.onerror = () => resolve(fallbackImageDataUrl);
             });
         } catch (error) {
-            console.warn('[MemberModule] Unable to convert image URL to base64', url, error);
-            return null;
+            console.warn('[MemberModule] Unable to convert image URL to base64, using fallback asset instead.', url, error);
+            return fallbackImageDataUrl;
         }
     };
 
@@ -841,7 +1147,16 @@ const MemberModule = (() => {
         const renderArea = document.getElementById('invoice-render-area');
         if (!previewModal || !renderArea) return;
 
-        pendingInvoiceAssets = await resolveInvoiceAssets();
+        try {
+            pendingInvoiceAssets = await resolveInvoiceAssets();
+        } catch (error) {
+            console.warn('[MemberModule] Invoice assets could not be resolved. Falling back to placeholder assets.', error);
+            pendingInvoiceAssets = {
+                logoSrc: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
+                signatureSrc: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+            };
+        }
+
         renderArea.innerHTML = generateInvoiceHTML(memberData, pendingInvoiceAssets);
         previewModal.classList.add('active');
         previewModal.setAttribute('aria-hidden', 'false');
@@ -860,41 +1175,110 @@ const MemberModule = (() => {
     };
 
     const persistMemberRecord = async (memberData, editTarget = null) => {
-        const fullName = `${memberData.firstName || ''} ${memberData.lastName || ''}`.trim();
-        const member = editTarget?.id
-            ? StateManager.Members.update(editTarget.id, memberData)
-            : StateManager.Members.create(memberData);
-        const persistedMember = { ...memberData, id: member.id };
+        try {
+            const branchId = String(window.APP_DEFAULT_BRANCH_ID || '').trim();
+            const normalizedGender = ['male', 'female', 'other', 'prefer_not_to_say'].includes(String(memberData.gender || '').toLowerCase())
+                ? String(memberData.gender).toLowerCase()
+                : 'prefer_not_to_say';
 
-        if (window.AsyncStateManager?.Members?.upsert) {
-            await AsyncStateManager.Members.upsert({
-                ...memberData,
-                id: member.id,
-                memberId: member.memberId || memberData.memberId
+            const payload = {
+                branch_id: branchId,
+                first_name: String(memberData.firstName || memberData.name || '').trim(),
+                last_name: String(memberData.lastName || '').trim() || null,
+                contact_no: String(memberData.phone || memberData.contactNo || memberData.contact || '').trim(),
+                gender: normalizedGender,
+                member_code: String(
+                    memberData.memberId ||
+                    memberData.member_code ||
+                    memberData.memberCode ||
+                    `KA-${Date.now().toString().slice(-6)}`
+                ).trim(),
+                status: 'active',
+                date_of_birth: memberData.dob || memberData.dateOfBirth || null,
+                email: String(memberData.email || '').trim() || null,
+                address: String(memberData.address || '').trim() || null,
+                city: String(memberData.city || '').trim() || null,
+                package_name: getPackageDisplayName(memberData.package),
+                start_date: memberData.startDate || null,
+                end_date: memberData.endDate || null,
+                balance: Number(memberData.balance) || 0,
+                total_paid: Number(memberData.paidAmount || memberData.totalPaid) || 0,
+                notes: String(memberData.notes || '').trim() || null
+            };
+
+            if (!payload.branch_id) {
+                throw new Error('window.APP_DEFAULT_BRANCH_ID is missing or empty');
+            }
+
+            if (!payload.first_name) {
+                throw new Error('first_name is required before saving a member');
+            }
+
+            if (!payload.contact_no) {
+                throw new Error('contact_no is required before saving a member');
+            }
+
+            const requestUrl = editTarget?.id
+                ? `${MEMBERS_API_URL}/${encodeURIComponent(editTarget.id)}`
+                : MEMBERS_API_URL;
+            const requestMethod = editTarget?.id ? 'PUT' : 'POST';
+
+            const response = await fetch(requestUrl, {
+                method: requestMethod,
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json'
+                },
+                body: JSON.stringify(payload)
             });
-        }
 
-        StateManager.Receipts.create({
-            memberId: member.id,
-            memberName: fullName,
-            amount: memberData.paidAmount,
-            discount: memberData.discount,
-            totalAmount: memberData.fees,
-            package: memberData.package,
-            paymentMode: memberData.paymentMode,
-            note: `${editTarget?.id ? 'Member Updated' : 'New Member Registration'} - ${memberData.package}`,
-            receiptDate: new Date().toISOString().split('T')[0]
-        });
+            if (!response.ok) {
+                let errorData = {};
 
-        renderMembersTableSafe();
-        if (window.DashboardAnalytics?.refresh) {
-            DashboardAnalytics.refresh();
-        }
-        if (typeof window.renderReportsHub === 'function') {
-            renderReportsHub();
-        }
+                try {
+                    errorData = await response.json();
+                } catch (parseError) {
+                    console.warn('[MemberModule] Failed to parse error response JSON', parseError);
+                }
 
-        return persistedMember;
+                console.error('[MemberModule] Member API rejected payload', {
+                    status: response.status,
+                    errors: errorData?.errors || null,
+                    message: errorData?.message || null,
+                    payload
+                });
+
+                throw new Error(
+                    errorData?.message ||
+                    (Array.isArray(errorData?.errors) && errorData.errors.length > 0
+                        ? errorData.errors.map((item) => item.message || item.msg).join(', ')
+                        : `Request failed with status ${response.status}`)
+                );
+            }
+
+            const responsePayload = await response.json().catch(() => ({}));
+            const savedMember = extractMemberFromResponse(responsePayload);
+            if (!savedMember) {
+                throw new Error('Members API did not return the saved member');
+            }
+
+            const normalizedMember = mapApiMemberToUi(savedMember);
+            memberCache = memberCache.filter((member) => String(member.id) !== String(normalizedMember.id));
+            memberCache.unshift(normalizedMember);
+
+            await renderMembersTableSafe();
+            if (window.DashboardAnalytics?.refresh) {
+                DashboardAnalytics.refresh();
+            }
+            if (typeof window.renderReportsHub === 'function') {
+                renderReportsHub();
+            }
+
+            return normalizedMember;
+        } catch (error) {
+            console.error('[MemberModule] Failed to persist member via API', error);
+            throw error;
+        }
     };
 
     const validateMemberDraft = (formData) => {
@@ -1040,7 +1424,6 @@ const MemberModule = (() => {
         if (memberSubmitInFlight) return;
 
         const modal = document.querySelector('.modal-drawer');
-        const form = modal?.querySelector('#add-member-form');
         const submitButton = modal?.querySelector('#btn-save-preview');
         const formData = collectFormData();
 
@@ -1091,15 +1474,22 @@ const MemberModule = (() => {
      * Generate invoice HTML
      */
     const generateInvoiceHTML = (memberData, invoiceAssets = {}) => {
-        const discountAmount = Number(memberData.discount) || 0;
-        const balance = calculateBalance(memberData.fees, memberData.discount, memberData.paidAmount);
+        const totals = calculateInvoiceTotals(
+            memberData.fees,
+            memberData.discountValue ?? memberData.discount,
+            memberData.paidAmount,
+            memberData.discountType || 'amount'
+        );
+        const discountAmount = totals.discountAmount;
+        const balance = totals.balance;
         const nextDueDate = memberData.endDate || new Date().toLocaleDateString();
 
         // Get company settings
         const settings = SettingsManager.getCompanyProfile();
         const tax = SettingsManager.getTaxConfiguration();
-        const taxAmount = ((memberData.fees - discountAmount) * tax.taxPercentage) / 100;
-        const totalAmount = (memberData.fees - discountAmount) + taxAmount;
+        const taxAmount = totals.taxAmount;
+        const totalAmount = totals.netTotal;
+        const subtotal = totals.subtotal;
         const status = getMemberStatus(memberData.endDate);
         const escapeInvoice = (value) => String(value ?? '')
             .replace(/&/g, '&amp;')
@@ -1186,7 +1576,7 @@ const MemberModule = (() => {
                         ` : ''}
                         <tr>
                             <td style="padding: 10px; border: 1px solid #d9e0e7; font-size: 13px;"><strong>Subtotal</strong></td>
-                            <td style="padding: 10px; border: 1px solid #d9e0e7; text-align: right; font-size: 13px;"><strong>${escapeInvoice(formatINR(memberData.fees - discountAmount))}</strong></td>
+                            <td style="padding: 10px; border: 1px solid #d9e0e7; text-align: right; font-size: 13px;"><strong>${escapeInvoice(formatINR(subtotal))}</strong></td>
                         </tr>
                         <tr>
                             <td style="padding: 10px; border: 1px solid #d9e0e7; font-size: 13px;"><strong>${escapeInvoice(tax.taxLabel)} (${escapeInvoice(tax.taxPercentage)}%)</strong></td>
@@ -1229,7 +1619,7 @@ const MemberModule = (() => {
             <div class="invoice-container">
                 <div class="invoice-header">
                     <div class="gym-info">
-                        ${settings.logoUrl ? `<img src="${settings.logoUrl}" alt="Logo" style="max-height: 60px; margin-bottom: 1rem;">` : ''}
+                        ${settings.logoUrl ? `<img src="${settings.logoUrl}" alt="Logo" style="max-height: 60px; margin-bottom: 1rem;" onerror="this.style.display='none'">` : ''}
                         <h2>${settings.gymName}</h2>
                         <div class="gym-address">
                             <p>${settings.fullAddress}</p>
@@ -1287,15 +1677,15 @@ const MemberModule = (() => {
                                 ` : ''}
                                 <tr>
                                     <td><strong>Subtotal</strong></td>
-                                    <td style="text-align: right;"><strong>₹${(memberData.fees - discountAmount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
+                                    <td style="text-align: right;"><strong>₹${subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
                                 </tr>
                                 <tr>
                                     <td><strong>${tax.taxLabel} (${tax.taxPercentage}%)</strong></td>
-                                    <td style="text-align: right;"><strong>₹${((memberData.fees - discountAmount) * tax.taxPercentage / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
+                                    <td style="text-align: right;"><strong>₹${taxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
                                 </tr>
                                 <tr style="background: rgba(13, 28, 47, 0.02);">
                                     <td><strong>Total Amount</strong></td>
-                                    <td style="text-align: right;"><strong>₹${((memberData.fees - discountAmount) * (1 + tax.taxPercentage / 100)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
+                                    <td style="text-align: right;"><strong>₹${totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1332,9 +1722,9 @@ const MemberModule = (() => {
         return invoiceHTML
             .replace(`â‚¹${parseFloat(memberData.fees).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, formatINR(memberData.fees))
             .replace(`-â‚¹${discountAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, `-${formatINR(discountAmount)}`)
-            .replace(`â‚¹${(memberData.fees - discountAmount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, formatINR(memberData.fees - discountAmount))
-            .replace(`â‚¹${((memberData.fees - discountAmount) * tax.taxPercentage / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, formatINR(((memberData.fees - discountAmount) * tax.taxPercentage / 100)))
-            .replace(`â‚¹${((memberData.fees - discountAmount) * (1 + tax.taxPercentage / 100)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, formatINR(((memberData.fees - discountAmount) * (1 + tax.taxPercentage / 100))))
+            .replace(`â‚¹${subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, formatINR(subtotal))
+            .replace(`â‚¹${taxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, formatINR(taxAmount))
+            .replace(`â‚¹${totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, formatINR(totalAmount))
             .replace(`â‚¹${parseFloat(memberData.paidAmount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, formatINR(memberData.paidAmount))
             .replace(`â‚¹${balance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, formatINR(balance));
     };
@@ -1354,16 +1744,10 @@ const MemberModule = (() => {
         });
     };
 
-    const getMemberStore = () => {
-        if (window.MemberRepository && typeof window.MemberRepository.getAll === 'function') {
-            return window.MemberRepository;
-        }
-
-        return {
-            getAll: () => StateManager?.Members?.getAll?.() || [],
-            getById: (id) => StateManager?.Members?.getById?.(id) || null
-        };
-    };
+    const getMemberStore = () => ({
+        getAll: () => memberCache,
+        getById: (id) => getCachedMemberById(id)
+    });
 
     const formatMemberDate = (value) => {
         if (!value) return 'N/A';
@@ -1420,7 +1804,10 @@ const MemberModule = (() => {
         contact: String(member.contact || ''),
         email: String(member.email || '').trim(),
         package: String(member.package || 'N/A'),
+        packageLabel: String(member.packageLabel || member.packageName || member.package || 'N/A'),
         endDate: member.endDate || '',
+        fees: Number(member.fees) || (Number(member.totalPaid) || 0) + (Number(member.balance) || 0),
+        paidAmount: Number(member.paidAmount) || Number(member.totalPaid) || 0,
         balance: Number(member.balance) || 0,
         status: getMemberStatus(member.endDate).text.toLowerCase(),
         gender: String(member.gender || '').toLowerCase()
@@ -1430,8 +1817,7 @@ const MemberModule = (() => {
      * Get filtered members
      */
     const getFilteredMembers = async () => {
-        const memberStore = getMemberStore();
-        const rawMembers = await Promise.resolve(memberStore.getAll());
+        const rawMembers = await loadMembersFromApi();
         let members = Array.isArray(rawMembers) ? rawMembers.map(normalizeMember) : [];
         const search = String(document.querySelector('#member-search')?.value || '').trim().toLowerCase();
         const genderFilter = String(document.querySelector('#gender-filter')?.value || 'all').toLowerCase();
@@ -1459,59 +1845,13 @@ const MemberModule = (() => {
     /**
      * Render members table
      */
-    const renderMembersTable = () => {
-        const tbody = document.querySelector('#members-table-body');
-        const emptyState = document.querySelector('#members-empty-state');
-
-        if (!tbody) return;
-
-        const members = getFilteredMembers();
-
-        if (members.length === 0) {
-            tbody.innerHTML = '';
-            if (emptyState) emptyState.style.display = 'flex';
-            return;
-        }
-
-        if (emptyState) emptyState.style.display = 'none';
-
-        tbody.innerHTML = members.map(member => {
-            const endDate = parseMemberEndDate(member.endDate);
-            const status = getMemberStatus(member.endDate);
-            const balanceText = member.balance > 0 ? `₹${member.balance.toFixed(2)}` : 'Paid';
-
-            return `
-                <tr>
-                    <td><strong>${member.memberId}</strong></td>
-                    <td>${member.firstName} ${member.lastName}</td>
-                    <td>${window.WhatsAppUtils ? WhatsAppUtils.createContactLink(member.contact, `Hello ${member.firstName || ''}, welcome to Kinetic Atelier.`) : member.contact}</td>
-                    <td>${member.package}</td>
-                    <td>${endDate ? endDate.toLocaleDateString('en-IN') : 'N/A'}</td>
-                    <td>${balanceText}</td>
-                    <td><span class="status-pill ${status.className}">${status.text}</span></td>
-                    <td>
-                        <div class="action-buttons">
-                            <button class="btn-icon" onclick="MemberModule.openForm(StateManager.Members.getById('${member.id}'))">
-                                <span class="material-icons-round">edit</span> Edit
-                            </button>
-                            <button class="btn-icon" onclick="WhatsAppUtils.openMemberPaymentReminder('${member.id}')">
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="margin-right: 4px; vertical-align: middle;"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.82 9.82 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg> WhatsApp
-                            </button>
-                            <button class="btn-icon" onclick="MemberModule.viewInvoice('${member.id}')">
-                                <span class="material-icons-round">receipt</span>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `;
-        }).join('');
-    };
+    const renderMembersTable = () => renderMembersTableSafe();
 
     /**
      * View invoice for member
      */
     const viewInvoice = (memberId) => {
-        const member = StateManager.Members.getById(memberId);
+        const member = getCachedMemberById(memberId);
         if (member) {
             showInvoicePreview(member);
         }
@@ -1529,7 +1869,7 @@ const MemberModule = (() => {
                 <td><strong>${member.memberId}</strong></td>
                 <td>${member.firstName} ${member.lastName}</td>
                 <td>${whatsappContact}</td>
-                <td>${member.package}</td>
+                <td>${member.packageLabel || member.package}</td>
                 <td>${formatMemberDate(member.endDate)}</td>
                 <td>${balanceText}</td>
                 <td><span class="status-pill ${status.className}">${status.text}</span></td>
@@ -1543,6 +1883,9 @@ const MemberModule = (() => {
                         </button>
                         <button class="btn-icon" type="button" data-action="invoice" data-member-id="${member.id}">
                             <span class="material-icons-round">receipt</span>
+                        </button>
+                        <button class="btn-icon" type="button" data-action="delete" data-member-id="${member.id}">
+                            <span class="material-icons-round">delete</span>
                         </button>
                     </div>
                 </td>
@@ -1595,7 +1938,7 @@ const MemberModule = (() => {
     };
 
     const viewInvoiceSafe = (memberId) => {
-        const member = getMemberStore().getById(memberId);
+        const member = getCachedMemberById(memberId);
         if (member) {
             showInvoicePreview(normalizeMember(member));
         }
@@ -1635,14 +1978,14 @@ const MemberModule = (() => {
 
             switch (actionButton.dataset.action) {
                 case 'edit': {
-                    const member = getMemberStore().getById(memberId);
+                    const member = getCachedMemberById(memberId);
                     if (member) {
                         openForm(member);
                     }
                     break;
                 }
                 case 'whatsapp': {
-                    const member = getMemberStore().getById(memberId);
+                    const member = getCachedMemberById(memberId);
                     if (member) {
                         openMemberWhatsApp(normalizeMember(member));
                     }
@@ -1650,6 +1993,15 @@ const MemberModule = (() => {
                 }
                 case 'invoice':
                     viewInvoiceSafe(memberId);
+                    break;
+                case 'delete':
+                    if (!window.confirm('Are you sure you want to delete this member?')) {
+                        return;
+                    }
+
+                    deleteMemberFromApi(memberId).catch(() => {
+                        showMembersToast('Unable to delete this member right now.', 'error', 'Delete Failed');
+                    });
                     break;
                 default:
                     break;
@@ -1689,3 +2041,4 @@ window.addEventListener('DOMContentLoaded', () => {
         MemberModule.initialize();
     }
 });
+

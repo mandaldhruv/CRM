@@ -311,7 +311,7 @@ const SettingsModule = (() => {
                         <div class="form-group">
                             <label>Logo Preview</label>
                             <div style="width: 160px; height: 160px; background: rgba(13, 28, 47, 0.05); border-radius: 12px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 2px dashed rgba(13, 28, 47, 0.2);">
-                                <img src="${escapeHtml(profile.logoUrl)}" alt="Logo" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                                <img src="${escapeHtml(profile.logoUrl)}" alt="Logo" style="max-width: 100%; max-height: 100%; object-fit: contain;" onerror="this.style.display='none'">
                             </div>
                         </div>
 
@@ -319,7 +319,7 @@ const SettingsModule = (() => {
                             <label>Signature Preview</label>
                             <div style="width: 220px; height: 100px; background: rgba(13, 28, 47, 0.05); border-radius: 12px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 2px dashed rgba(13, 28, 47, 0.2); padding: 0.75rem;">
                                 ${profile.signatureUrl
-                                    ? `<img src="${escapeHtml(profile.signatureUrl)}" alt="Signature" style="max-width: 100%; max-height: 100%; object-fit: contain;">`
+                                    ? `<img src="${escapeHtml(profile.signatureUrl)}" alt="Signature" style="max-width: 100%; max-height: 100%; object-fit: contain;" onerror="this.style.display='none'">`
                                     : '<span style="color: var(--on-surface-variant); font-size: 0.85rem;">No signature added</span>'}
                             </div>
                         </div>
@@ -492,7 +492,7 @@ const SettingsModule = (() => {
             <div style="padding: 2rem; background: white;">
                 <div style="max-width: 600px; margin: 0 auto; border: 1px solid rgba(13, 28, 47, 0.1); border-radius: 12px; padding: 2rem;">
                     <div style="text-align: center; margin-bottom: 2rem;">
-                        ${profile.logoUrl ? `<img src="${escapeHtml(profile.logoUrl)}" alt="Logo" style="max-height: 80px; margin-bottom: 1rem;">` : ''}
+                        ${profile.logoUrl ? `<img src="${escapeHtml(profile.logoUrl)}" alt="Logo" style="max-height: 80px; margin-bottom: 1rem;" onerror="this.style.display='none'">` : ''}
                         <h2 style="margin: 0; color: var(--on-surface);">${escapeHtml(profile.gymName)}</h2>
                         <p style="margin: 0.5rem 0 0 0; color: var(--on-surface-variant); font-size: 0.9rem;">${escapeHtml(profile.fullAddress)}</p>
                         <p style="margin: 0.25rem 0 0 0; color: var(--on-surface-variant); font-size: 0.85rem;">Phone: ${escapeHtml(profile.phone)} | Email: ${escapeHtml(profile.email)}</p>
@@ -500,7 +500,7 @@ const SettingsModule = (() => {
                     </div>
                     ${profile.signatureUrl ? `
                         <div style="text-align: right; margin-top: 2rem;">
-                            <img src="${escapeHtml(profile.signatureUrl)}" alt="Digital Signature" style="max-height: 72px; max-width: 220px; object-fit: contain;">
+                            <img src="${escapeHtml(profile.signatureUrl)}" alt="Digital Signature" style="max-height: 72px; max-width: 220px; object-fit: contain;" onerror="this.style.display='none'">
                         </div>
                     ` : ''}
                 </div>

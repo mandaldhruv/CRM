@@ -4036,6 +4036,8 @@
     <!-- TOAST NOTIFICATION CONTAINER -->
     <div id="toast-container" class="toast-container"></div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <script src="state-management.js"></script>
     <script src="ui-components.js"></script>
     <script src="settings-management.js"></script>
@@ -4049,6 +4051,7 @@
     <script src="state-management-indexeddb.js"></script>
     <script type="module" src="auth-guard.js"></script>
     <script>
+        window.APP_DEFAULT_BRANCH_ID = '00000000-0000-0000-0000-000000000001';
         const WhatsAppUtils = {
             normalizeNumber(value = '') {
                 const digits = String(value).replace(/\D/g, '');
@@ -4773,70 +4776,131 @@
         }
 
         async function exportToPDF() {
-            console.log('Starting PDF generation...');
-            let pdfWrapper = null;
-
             try {
-                if (typeof html2pdf === 'undefined') {
-                    throw new Error('html2pdf.js is not loaded.');
+                const JsPdfConstructor = window.jspdf?.jsPDF || window.jsPDF;
+                if (!JsPdfConstructor) {
+                    throw new Error('jsPDF is not loaded.');
                 }
 
-                const dashboardSection = document.getElementById('dashboard-section');
-                if (!dashboardSection) {
-                    throw new Error('Dashboard section not found.');
-                }
+                const doc = new JsPdfConstructor({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: 'a4'
+                });
 
                 const reportDropdown = document.getElementById('report-export-dropdown');
                 reportDropdown?.classList.remove('active');
 
-                await new Promise((resolve) => {
-                    requestAnimationFrame(() => {
-                        setTimeout(resolve, 100);
-                    });
-                });
+                const today = new Date();
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const marginX = 14;
+                const safeCurrency = (value) => `Rs. ${Number(value || 0).toLocaleString('en-IN', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                })}`;
 
-                const clone = dashboardSection.cloneNode(true);
-                clone.style.background = '#ffffff';
-                clone.style.color = '#111111';
-                clone.style.width = `${Math.max(dashboardSection.scrollWidth, dashboardSection.offsetWidth, 1200)}px`;
-                clone.style.maxWidth = 'none';
-                clone.style.padding = '24px';
-                clone.style.margin = '0';
-
-                pdfWrapper = document.createElement('div');
-                pdfWrapper.style.position = 'fixed';
-                pdfWrapper.style.left = '-10000px';
-                pdfWrapper.style.top = '0';
-                pdfWrapper.style.width = clone.style.width;
-                pdfWrapper.style.background = '#ffffff';
-                pdfWrapper.style.zIndex = '-1';
-                pdfWrapper.appendChild(clone);
-                document.body.appendChild(pdfWrapper);
-
-                const options = {
-                    margin: [8, 8, 10, 8],
-                    filename: `dashboard-report-${getTodayIsoDate()}.pdf`,
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: {
-                        scale: 2,
-                        useCORS: true,
-                        backgroundColor: '#ffffff',
-                        scrollX: 0,
-                        scrollY: 0,
-                        windowWidth: clone.scrollWidth,
-                        windowHeight: clone.scrollHeight
-                    },
-                    jsPDF: {
-                        unit: 'mm',
-                        format: 'a4',
-                        orientation: 'landscape'
-                    },
-                    pagebreak: {
-                        mode: ['css', 'legacy']
-                    }
+                const pulse = {
+                    todaysCollection: Number(DashboardAnalytics?.calculateTodaysCollection?.() || 0),
+                    activeSubscriptions: Number(DashboardAnalytics?.getActiveSubscriptions?.() || 0),
+                    expiringSoon: Number(DashboardAnalytics?.getExpiringSoonList?.()?.length || DashboardAnalytics?.getExpiringMembers?.()?.length || 0),
+                    netProfit: Number(DashboardAnalytics?.calculateNetProfit?.() || 0)
                 };
 
-                await html2pdf().set(options).from(clone).save();
+                const recentActivity = Array.isArray(DashboardAnalytics?.getRecentActivity?.())
+                    ? DashboardAnalytics.getRecentActivity()
+                    : [];
+
+                const metricsRows = [
+                    ['Today\'s Collection', safeCurrency(pulse.todaysCollection)],
+                    ['Active Subscriptions', String(pulse.activeSubscriptions)],
+                    ['Expiring Soon', String(pulse.expiringSoon)],
+                    ['Net Profit', safeCurrency(pulse.netProfit)]
+                ];
+
+                const activityRows = recentActivity.length > 0
+                    ? recentActivity.map((entry) => ([
+                        String(entry.user || 'Activity'),
+                        String(entry.type || 'General'),
+                        safeCurrency(entry.amount || 0),
+                        String(entry.status || 'processed'),
+                        entry.created_at ? new Date(entry.created_at).toLocaleDateString('en-IN') : '-'
+                    ]))
+                    : [['No recent activity available', '-', '-', '-', '-']];
+
+                doc.setFillColor(248, 249, 250);
+                doc.rect(0, 0, pageWidth, 297, 'F');
+
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(20);
+                doc.setTextColor(44, 62, 80);
+                doc.text('Kinetic Atelier - Operations Report', pageWidth / 2, 18, { align: 'center' });
+
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(10);
+                doc.setTextColor(90, 98, 104);
+                doc.text(`Generated on ${today.toLocaleString('en-IN')}`, pageWidth / 2, 25, { align: 'center' });
+
+                if (typeof doc.autoTable !== 'function') {
+                    throw new Error('jspdf-autotable is not loaded.');
+                }
+
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(12);
+                doc.setTextColor(44, 62, 80);
+                doc.text('Metrics Summary', marginX, 38);
+
+                doc.autoTable({
+                    startY: 42,
+                    head: [['Metric', 'Value']],
+                    body: metricsRows,
+                    theme: 'striped',
+                    margin: { left: marginX, right: marginX },
+                    styles: {
+                        font: 'helvetica',
+                        fontSize: 10,
+                        cellPadding: 3,
+                        textColor: [33, 37, 41]
+                    },
+                    headStyles: {
+                        fillColor: [44, 62, 80],
+                        textColor: 255,
+                        halign: 'center'
+                    },
+                    columnStyles: {
+                        1: { halign: 'right' }
+                    }
+                });
+
+                const nextY = doc.lastAutoTable.finalY + 10;
+
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(12);
+                doc.setTextColor(44, 62, 80);
+                doc.text('Recent Activity', marginX, nextY);
+
+                doc.autoTable({
+                    startY: nextY + 4,
+                    head: [['User', 'Type', 'Amount', 'Status', 'Date']],
+                    body: activityRows,
+                    theme: 'striped',
+                    margin: { left: marginX, right: marginX },
+                    styles: {
+                        font: 'helvetica',
+                        fontSize: 9,
+                        cellPadding: 3,
+                        textColor: [33, 37, 41]
+                    },
+                    headStyles: {
+                        fillColor: [44, 62, 80],
+                        textColor: 255,
+                        halign: 'center'
+                    },
+                    columnStyles: {
+                        2: { halign: 'right' }
+                    }
+                });
+
+                doc.save(`dashboard-report-${getTodayIsoDate()}.pdf`);
 
                 UIComponents?.showToast('Dashboard PDF downloaded.', 'success', 'PDF Ready');
                 return true;
@@ -4844,10 +4908,6 @@
                 console.error('[Report] PDF export failed', error);
                 UIComponents?.showToast('PDF generation failed.', 'error', 'PDF Error');
                 return false;
-            } finally {
-                if (pdfWrapper && pdfWrapper.parentNode) {
-                    pdfWrapper.parentNode.removeChild(pdfWrapper);
-                }
             }
         }
 
@@ -5132,70 +5192,62 @@
 
                 switch (type) {
                     case 'collection': {
-                        const receipts = getCollectionFromStorage(['receipts', 'ka_receipts'], () => StateManager.Receipts.getAll()) || [];
-                        const today = getTodayIsoDate();
-                        const todaysReceipts = receipts.filter(r => {
-                            const d = r.receiptDate || r.createdAt?.split('T')[0] || '';
-                            return d === today;
-                        });
+                        const todaysIncomeList = DashboardAnalytics.getTodaysIncomeList?.() || [];
 
-                        if (todaysReceipts.length === 0) {
+                        if (todaysIncomeList.length === 0) {
                             openDetailsDrawer("Today's Collection", 'payments',
-                                '<div class="details-empty"><span class="material-icons-round">receipt_long</span><p>No receipts recorded today yet.</p></div>');
+                                `<div class="details-empty"><span class="material-icons-round">receipt_long</span><p>No income collected today yet.</p></div>
+                                <div class="details-summary-row total" style="margin-top:1rem;"><span>Total</span><span>${formatINR(DashboardAnalytics.calculateTodaysCollection())}</span></div>`);
                         } else {
-                            let rows = todaysReceipts.map(r => `<tr>
-                                <td>${r.memberName || 'N/A'}</td>
+                            let rows = todaysIncomeList.map(r => `<tr>
+                                <td>${escapeHtml([r.first_name, r.last_name].filter(Boolean).join(' ').trim() || 'N/A')}</td>
                                 <td style="font-weight:700">${formatINR(r.amount || 0)}</td>
-                                <td>${r.paymentMode || r.mode || 'N/A'}</td>
-                                <td>${r.note || r.package || ''}</td>
+                                <td>${escapeHtml(r.package_name || 'Membership')}</td>
+                                <td>Collected Today</td>
                             </tr>`).join('');
-                            const total = todaysReceipts.reduce((s, r) => s + (Number(r.amount) || 0), 0);
                             openDetailsDrawer("Today's Collection", 'payments',
-                                `<table class="details-table"><thead><tr><th>Member</th><th>Amount</th><th>Mode</th><th>Note</th></tr></thead><tbody>${rows}</tbody></table>
-                                <div class="details-summary-row total" style="margin-top:1rem;"><span>Total</span><span>${formatINR(total)}</span></div>`);
+                                `<p style="margin-bottom:1rem;color:var(--text-secondary)">Showing today's paid member receipts from the live dashboard API.</p>
+                                <table class="details-table"><thead><tr><th>Member</th><th>Amount</th><th>Package</th><th>Source</th></tr></thead><tbody>${rows}</tbody></table>
+                                <div class="details-summary-row total" style="margin-top:1rem;"><span>Total</span><span>${formatINR(DashboardAnalytics.calculateTodaysCollection())}</span></div>`);
                         }
                         break;
                     }
                     case 'active': {
-                        const members = getMembersReportData().filter(m => String(m.status || '').toLowerCase() === 'active');
-                        if (members.length === 0) {
+                        const totalActive = DashboardAnalytics.getActiveSubscriptions();
+                        const activeMembersList = DashboardAnalytics.getActiveMembersList?.() || [];
+                        if (totalActive === 0) {
                             openDetailsDrawer('Active Subscriptions', 'people',
                                 '<div class="details-empty"><span class="material-icons-round">people_outline</span><p>No active members found.</p></div>');
                         } else {
-                            let rows = members.map(m => {
-                                const name = [m.firstName, m.lastName].filter(Boolean).join(' ') || m.name || '';
-                                return `<tr><td>${name}</td><td>${m.package || m.membershipPlan || 'N/A'}</td><td>${m.startDate ? new Date(m.startDate).toLocaleDateString() : 'N/A'}</td><td>${m.endDate ? new Date(m.endDate).toLocaleDateString() : 'N/A'}</td></tr>`;
+                            const rows = activeMembersList.map(member => {
+                                const fullName = [member.first_name, member.last_name].filter(Boolean).join(' ').trim() || 'Member';
+                                const membershipEnd = member.end_date ? new Date(member.end_date).toLocaleDateString() : 'N/A';
+                                return `<tr><td>${escapeHtml(fullName)}</td><td>${escapeHtml(member.contact_no || 'N/A')}</td><td>${membershipEnd}</td></tr>`;
                             }).join('');
                             openDetailsDrawer('Active Subscriptions', 'people',
-                                `<p style="margin-bottom:1rem;color:var(--text-secondary)">${members.length} active member${members.length !== 1 ? 's' : ''}</p>
-                                <table class="details-table"><thead><tr><th>Name</th><th>Package</th><th>Start</th><th>End</th></tr></thead><tbody>${rows}</tbody></table>`);
+                                `<div class="details-summary-row total"><span>Active Subscriptions</span><span>${totalActive}</span></div>
+                                <table class="details-table" style="margin-top:1rem;"><thead><tr><th>Name</th><th>Contact</th><th>End Date</th></tr></thead><tbody>${rows}</tbody></table>`);
                         }
                         break;
                     }
                     case 'expiring': {
-                        const allMembers = getMembersReportData();
-                        const now = new Date();
-                        const futureDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-                        const expiring = allMembers.filter(m => {
-                            if (!m.endDate || String(m.status || '').toLowerCase() !== 'active') return false;
-                            const end = new Date(m.endDate);
-                            return end >= now && end <= futureDate;
-                        });
+                        const expiring = DashboardAnalytics.getExpiringSoonList?.() || [];
 
                         if (expiring.length === 0) {
                             openDetailsDrawer('Expiring Soon', 'schedule',
                                 '<div class="details-empty"><span class="material-icons-round">event_available</span><p>No memberships expiring in the next 7 days.</p></div>');
                         } else {
                             let rows = expiring.map(m => {
-                                const name = [m.firstName, m.lastName].filter(Boolean).join(' ') || m.name || '';
-                                const end = new Date(m.endDate);
-                                const daysLeft = Math.max(0, Math.ceil((end - now) / (1000 * 60 * 60 * 24)));
+                                const name = [m.first_name, m.last_name].filter(Boolean).join(' ').trim() || 'Member';
+                                const endDateValue = m.end_date || m.endDate;
+                                const end = endDateValue ? new Date(endDateValue) : null;
+                                const daysLeft = end ? Math.max(0, Math.ceil((end.setHours(0, 0, 0, 0) - new Date(new Date().setHours(0, 0, 0, 0))) / 86400000)) : 0;
                                 const urgencyColor = daysLeft <= 2 ? 'var(--error, #c62828)' : daysLeft <= 4 ? 'var(--warning, #ed6c02)' : 'var(--text-primary)';
-                                return `<tr><td>${name}</td><td>${m.package || 'N/A'}</td><td>${end.toLocaleDateString()}</td><td style="font-weight:700;color:${urgencyColor}">${daysLeft} day${daysLeft !== 1 ? 's' : ''}</td></tr>`;
+                                return `<tr><td>${escapeHtml(name)}</td><td>${escapeHtml(m.contact_no || 'N/A')}</td><td>${end ? end.toLocaleDateString() : 'N/A'}</td><td style="font-weight:700;color:${urgencyColor}">${daysLeft} day${daysLeft !== 1 ? 's' : ''}</td></tr>`;
                             }).join('');
                             openDetailsDrawer('Expiring Soon', 'schedule',
                                 `<p style="margin-bottom:1rem;color:var(--text-secondary)">${expiring.length} membership${expiring.length !== 1 ? 's' : ''} expiring within 7 days</p>
-                                <table class="details-table"><thead><tr><th>Name</th><th>Package</th><th>End Date</th><th>Days Left</th></tr></thead><tbody>${rows}</tbody></table>`);
+                                <table class="details-table"><thead><tr><th>Name</th><th>Contact</th><th>End Date</th><th>Days Left</th></tr></thead><tbody>${rows}</tbody></table>`);
                         }
                         break;
                     }

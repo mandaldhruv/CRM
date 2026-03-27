@@ -7,12 +7,27 @@
 
 const SettingsManager = (() => {
     const STORAGE_KEY = 'ka_settings';
+    const SAFE_IMAGE_FALLBACK = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
+    const sanitizeImageUrl = (value = '') => {
+        const normalizedValue = String(value || '').trim();
+
+        if (!normalizedValue) {
+            return '';
+        }
+
+        if (normalizedValue.includes('via.placeholder.com')) {
+            return SAFE_IMAGE_FALLBACK;
+        }
+
+        return normalizedValue;
+    };
 
     // Default settings structure
     const DEFAULT_SETTINGS = {
         companyProfile: {
             gymName: 'Kinetic Atelier',
-            logoUrl: 'https://via.placeholder.com/150?text=Gym+Logo',
+            logoUrl: SAFE_IMAGE_FALLBACK,
             signatureUrl: '',
             fullAddress: '123 Fitness Street, Gym City, State 12345',
             phone: '+91 9876543210',
@@ -78,7 +93,12 @@ const SettingsManager = (() => {
      * Get company profile
      */
     const getCompanyProfile = () => {
-        return getAll().companyProfile;
+        const profile = getAll().companyProfile;
+        return {
+            ...profile,
+            logoUrl: sanitizeImageUrl(profile.logoUrl),
+            signatureUrl: sanitizeImageUrl(profile.signatureUrl)
+        };
     };
 
     /**
@@ -111,8 +131,8 @@ const SettingsManager = (() => {
             const settings = getAll();
             settings.companyProfile = {
                 gymName: profileData.gymName || settings.companyProfile.gymName,
-                logoUrl: profileData.logoUrl || settings.companyProfile.logoUrl,
-                signatureUrl: profileData.signatureUrl || settings.companyProfile.signatureUrl || '',
+                logoUrl: sanitizeImageUrl(profileData.logoUrl || settings.companyProfile.logoUrl),
+                signatureUrl: sanitizeImageUrl(profileData.signatureUrl || settings.companyProfile.signatureUrl || ''),
                 fullAddress: profileData.fullAddress || settings.companyProfile.fullAddress,
                 phone: profileData.phone || settings.companyProfile.phone,
                 email: profileData.email || settings.companyProfile.email,
